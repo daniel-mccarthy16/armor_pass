@@ -10,6 +10,7 @@ pub struct CredentialSet {
     username: String,
     password: String,
 }
+use crate::validation;
 
 impl PasswordManager {
     pub fn new() -> Self {
@@ -21,9 +22,13 @@ impl PasswordManager {
 
     pub fn store_password(&mut self, identifier: &str, username: &str, password: &str) -> Result<(), String> {
 
-        Self::validate_password(password).map_err(|e| format!("Password is invalid: {}", e.to_string()))?;
-        Self::validate_username(username).map_err(|e| format!("Username is invalid: {}", e.to_string()))?;
-        Self::validate_identifier(identifier).map_err(|e| format!("Identifier is invalid: {}", e.to_string()))?;
+        validation::validate_password(password).map_err(|e| format!("Password is invalid: {}", e.to_string()))?;
+        validation::validate_username(username).map_err(|e| format!("Username is invalid: {}", e.to_string()))?;
+        validation::validate_identifier(identifier).map_err(|e| format!("Identifier is invalid: {}", e.to_string()))?;
+
+        if self.password_is_duplicate(password) {
+            return Err("Password must be unique".to_string());
+        }
 
         let new_credentials = CredentialSet {
             identifier: identifier.to_string(),
@@ -91,24 +96,6 @@ impl PasswordManager {
             .collect()
     }
 
-    // pub fn encrypt_password(&self, password: &str) -> String {
-    //     "sdfsdfsdf"
-    // }
-    //
-    // pub fn decrypt_password(&self, encrypted_password: &str) -> String {
-    //     "sdfsdfsdf"
-    // }
-    //
-    // pub fn save_to_disk(&self) -> std::io::Result<()> {
-    // }
-    //
-    // pub fn load_from_disk() -> std::io::Result<Self> {
-    // }
-    //
-    // pub fn is_password_valid(&self, password: &str) -> bool {
-    // }
-    //
-    //
     fn persist_credentials(&self) -> Result<(), String> {
         let json_data = serde_json::to_string(&self.records)
             .map_err(|e| format!("Failed to serialize records to json: {}", e.to_string()))?;
@@ -119,49 +106,11 @@ impl PasswordManager {
         Ok(())
     }
 
-    fn contains_three_uppercase(password: &str) -> bool {
-        password.chars().filter(|c| c.is_uppercase()).count() >= 3
-    }
 
-    fn contains_three_digits(password: &str) -> bool {
-        password.chars().filter(|c| c.is_digit(10)).count() >= 3
-    }
-
-    fn is_at_least_fourteen_characters_long(password: &str) -> bool {
-        password.len() >= 14
-    }
-
-    fn is_at_least_three_characters_long(password: &str) -> bool {
-        password.len() >= 3
-    }
-
-    fn validate_password(password: &str) -> Result<(), &str> {
-        if !Self::is_at_least_fourteen_characters_long(password) {
-            return Err("Password must be at least 14 characters long")
-        }
-        if !Self::contains_three_uppercase(password) {
-            return Err("Password must contain at least three uppercase letters")
-        }
-        if !Self::contains_three_digits(password) {
-            return Err("Password must contain at least three digits")
-        }
-        Ok(())
+    fn password_is_duplicate(&self, password: &str) -> bool {
+        self.records.iter()
+            .any(|record| record.password == password)
     }
 
 
-    fn validate_username(username: &str) -> Result<(), &str> {
-        if !Self::is_at_least_three_characters_long(username) {
-            return Err("Username must be at least 3 characters long");
-        } else {
-            return Ok(())
-        }
-    }
-
-    fn validate_identifier(identifier: &str) -> Result<(), &str> {
-        if !Self::is_at_least_three_characters_long(identifier) {
-            return Err("Identifier must be at least 3 characters long");
-        } else {
-            return Ok(())
-        }
-    }
 }

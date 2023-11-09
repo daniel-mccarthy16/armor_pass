@@ -51,6 +51,7 @@ fn it_retrieves_the_correct_password() {
     
     let retrieved_password2 = password_manager.retrieve_password(IDENTIFIER, USERNAME2);
     assert_eq!(retrieved_password2, Some(PASSWORD2));
+    teardown();
 }
 
 #[test]
@@ -59,6 +60,7 @@ fn it_reports_successful_password_updates() {
     let _ = password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD);
     let update_result = password_manager.update_password(IDENTIFIER, USERNAME, NEW_PASSWORD);
     assert_eq!(update_result, Ok(()), "Password update should report success.");
+    teardown();
 }
 //
 #[test]
@@ -79,6 +81,7 @@ fn updating_a_particular_credential_set_does_not_affect_others() {
     let _ = password_manager.update_password(IDENTIFIER, USERNAME, NEW_PASSWORD);
     let retrieved_password2 = password_manager.retrieve_password(IDENTIFIER, USERNAME2);
     assert_eq!(retrieved_password2, Some(PASSWORD2), "Password for second user should remain unchanged.");
+    teardown();
 }
 
 #[test]
@@ -89,6 +92,7 @@ fn deleting_a_particular_credential_set_does_not_affect_others() {
     let _ = password_manager.update_password(IDENTIFIER, USERNAME, NEW_PASSWORD);
     let retrieved_password2 = password_manager.retrieve_password(IDENTIFIER, USERNAME2);
     assert_eq!(retrieved_password2, Some(PASSWORD2), "Password for second user should remain unchanged.");
+    teardown();
 }
 
 #[test]
@@ -97,6 +101,7 @@ fn it_reports_true_when_deleting_valid_credentials() {
     let _ = password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD);
     let delete_result = password_manager.delete_credential(IDENTIFIER, USERNAME);
     assert_eq!(delete_result, Ok(()), "Deleting an existing password should succeed.");
+    teardown();
 }
 
 #[test]
@@ -113,6 +118,7 @@ fn it_cannot_retrieve_a_deleted_password() {
 
     // Assert that the password cannot be retrieved after deletion
     assert_eq!(retrieved_password, None, "A deleted password should not be retrievable.");
+    teardown();
 }
 //
 // Tests that the method reports the correct status when attempting to delete a non-existent password.
@@ -121,6 +127,7 @@ fn it_reports_failure_when_deleting_nonexistent_password() {
     let mut password_manager = PasswordManager::new();
     let delete_result = password_manager.delete_credential(IDENTIFIER, USERNAME);
     assert!(delete_result.is_err(), "Deleting a non-existent password should fail.");
+    teardown();
 }
 
 // Tests that deleting one password does not affect other stored passwords.
@@ -132,6 +139,7 @@ fn it_does_not_delete_other_passwords() {
     let _ = password_manager.delete_credential(IDENTIFIER, USERNAME);
     assert!(!password_manager.has_password(IDENTIFIER, USERNAME), "The specified password should be deleted.");
     assert!(password_manager.has_password(IDENTIFIER, USERNAME2), "Other passwords should not be affected by the deletion of a different one.");
+    teardown();
 }
 
 #[test]
