@@ -5,6 +5,3 @@ mod generator;
 mod interface;
 mod validation;
 
-fn main() {
-    println!("Hello, world!");
-}
