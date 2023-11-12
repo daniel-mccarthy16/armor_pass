@@ -10,12 +10,12 @@ const PASSWORD_FEW_UPPERCASE: &str = "passwOrd@p14ass";
 const PASSWORD_FEW_DIGITS: &str = "Passwo1d@Passdfe"; 
 const PASSWORD_FEW_SYMBOLS: &str = "Passrd123456abcx"; 
 const SHORT_PASSWORD: &str = "!@236azxBCX*"; 
-
-// Assuming `PasswordManager` is in a module named `password_manager` at the root of the src directory
-
+const SALT: [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+const MASTERPASSWORD: &str = "HeyNowBrownCowAyLmao";
+// Assuming `PasswordManager` is i
 // use armor_pass::password_manager::PasswordManager;
 use armor_pass::password_manager::PasswordManager;
-
+// Assuming `PasswordManager` is 
 fn teardown() {
     let _ = std::fs::remove_file("/tmp/armor_pass.enc");
 }
@@ -243,26 +243,58 @@ fn it_requires_at_least_three_symbols_in_password() {
     teardown();
 }
 
-// #[test]
-// fn test_save_and_load() {
-//     let mut manager = PasswordManager::default();
-//     manager.records.push(PasswordRecord {
-//         identifier: "example.com".into(),
-//         username: "user123".into(),
-//         password: "securepassword".into(),
-//     });
-//
-//     let file_path = Path::new("test_passwords.json");
-//     
-//     // Test saving
-//     manager.save_to_file(file_path).unwrap();
-//     assert!(file_path.exists());
-//
-//     // Test loading
-//     let loaded_manager = PasswordManager::load_from_file(file_path).unwrap();
-//     assert_eq!(loaded_manager.records, manager.records);
-//
-//     // Clean up
-//     fs::remove_file(file_path).unwrap();
-// }
+#[test]
+fn it_does_not_store_credentials_as_utf8(){
+    let mut password_manager = PasswordManager::new();
+    let _ = password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD);
+    let file_contents = std::fs::read_to_string("/tmp/armor_pass.enc");
+    assert!(file_contents.is_ok(), "File was read as valid UTF-8 which indicates the file is not being encrypted after storing");
+    teardown();
+}
 
+#[test]
+fn it_does_not_store_passwords_as_plain_json() {
+    let mut password_manager = PasswordManager::new();
+    let _ = password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD);
+    let file_contents = std::fs::read("/tmp/armor_pass.enc").expect("Failed to read password file");
+    let parse_result: Result<serde_json::Value, _> = serde_json::from_slice(&file_contents);
+    assert!(parse_result.is_ok(), "File contents look like valid JSON, which may indicate they are not encrypted");
+    teardown();
+}
+
+//MAKE SURE YOU CAN ENCRYPT ASSERT ENCRYPTION, THEN DEENCRYPT AND ASSERT PLAIN TEXT AND CREDENTIALS
+//AGAIN
+
+// it_stores_different_encrypted_passwords_for_identical_plain_passwords:
+//
+// Verify that when the same password is encrypted multiple times, it results in different encrypted outputs due to the use of a salt or initialization vector (IV).
+// it_decrypts_password_to_original_form:
+//
+// Ensure that when a password is retrieved, it is decrypted back into its original plain text form.
+// it_fails_to_decrypt_with_incorrect_key:
+//
+// Check that decryption fails or returns an incorrect result if the wrong encryption key is used.
+// it_handles_encryption_and_decryption_of_special_characters_in_passwords:
+//
+// Verify that passwords with special characters are encrypted and decrypted correctly.
+// it_preserves_encryption_after_updating_password:
+//
+// When a password is updated, ensure that the new password is encrypted before storage.
+// it_does_not_expose_encryption_keys_or_salts:
+//
+// Make sure that encryption keys or salts are not stored with the encrypted passwords and are not easily accessible.
+// it_verifies_encrypted_passwords_are_not_plain_text_when_persisted:
+//
+// When passwords are saved to disk or database, ensure they are indeed in encrypted form and not plain text.
+// it_can_retrieve_and_decrypt_multiple_passwords_for_same_identifier:
+//
+// Test that multiple encrypted passwords can be retrieved and decrypted for the same identifier.
+// it_does_not_decrypt_passwords_if_encryption_schemas_mismatch:
+//
+// If the system has multiple encryption methods (e.g., after an upgrade), ensure that a password encrypted with one schema is not decrypted with a different schema.
+// it_ensures_encryption_algorithm_meets_security_standards:
+//
+// This might involve checking the length of the key, the algorithm used, or other properties that indicate the encryption is strong enough.
+// it_allows_password_retrieval_only_with_correct_decryption_procedure:
+//
+// Validate that passwords can only be retrieved using the correct decryption procedure, which includes using the correct key and algorithm.
