@@ -2,7 +2,6 @@ use openssl::pkcs5::pbkdf2_hmac;
 use openssl::hash::MessageDigest;
 use openssl::symm::{Cipher, Crypter, Mode};
 use openssl::error::ErrorStack;
-use serde_json::Result;
 use std::io::{Read, Write};
 use std::fs::File;
 use openssl::rand::rand_bytes;
@@ -25,7 +24,6 @@ impl CryptoManager {
 
     pub fn new(filepath: &str, password: &str) -> Result<Self, Box<dyn std::error::Error>> {
 
-        let mut file = File::open(filepath)?;
         match File::open(filepath) {
             Ok(mut file) => {
                 let mut salt = vec![0u8; SALT_LENGTH];
@@ -45,21 +43,22 @@ impl CryptoManager {
                     ciphertext,
                     password: password.to_string(),
                     key,
-                    filepath
+                    filepath : filepath.to_string()
                 })
 
             }
             Err(_) => {
                 let salt = CryptoManager::generate_salt(SALT_LENGTH)?;
                 let iv = CryptoManager::generate_iv(IV_LENGTH)?;
-                let key = CryptoManager::generate_key(password, salt)?;
+                let key = CryptoManager::generate_key(password, &salt)?;
 
                 Ok(CryptoManager { 
                     salt,
                     iv,
                     ciphertext: Vec::new(),
                     password: password.to_string(),
-                    key
+                    key,
+                    filepath : filepath.to_string()
                 })
             }
         }
@@ -68,7 +67,7 @@ impl CryptoManager {
 
     pub fn encrypt_and_persist(&mut self, data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
         let encrypted_data = self.encrypt_data(data)?;
-        self.ciphertext = encrypted_data;  // Store the encrypted data in the struct
+        self.ciphertext = encrypted_data;
         let mut file = File::create(&self.filepath)?;
         file.write_all(&self.salt)?;
         file.write_all(&self.iv)?;
@@ -80,7 +79,6 @@ impl CryptoManager {
         let cipher = Cipher::aes_256_cbc();
         let mut crypter = Crypter::new(cipher, Mode::Encrypt, &self.key, Some(&self.iv))?;
         crypter.pad(true);
-
         let mut encrypted = vec![0; data.len() + cipher.block_size()];
         let count = crypter.update(data, &mut encrypted)?;
         let rest = crypter.finalize(&mut encrypted[count..])?;
@@ -101,7 +99,6 @@ impl CryptoManager {
         let cipher = Cipher::aes_256_cbc();
         let mut crypter = Crypter::new(cipher, Mode::Decrypt, &self.key, Some(&self.iv))?;
         crypter.pad(true);
-
         let mut decrypted = vec![0; encrypted_data.len() + cipher.block_size()];
         let count = crypter.update(encrypted_data, &mut decrypted)?;
         let rest = crypter.finalize(&mut decrypted[count..])?;
@@ -115,8 +112,8 @@ impl CryptoManager {
         Ok(buffer)
     }
 
-    fn generate_iv() -> Result<Vec<u8>, ErrorStack> {
-        let mut buffer = vec![0u8; 16]; //should match AES block size
+    fn generate_iv(length: usize) -> Result<Vec<u8>, ErrorStack> {
+        let mut buffer = vec![0u8; length]; //should match AES block size
         rand_bytes(&mut buffer)?;
         Ok(buffer)
     }
@@ -127,7 +124,6 @@ impl CryptoManager {
         pbkdf2_hmac(password_bytes, salt, ITERATIONS, MessageDigest::sha256(), &mut key)?;
         Ok(key)
     }
-
 }
 
 // ENCRYPTING
