@@ -88,9 +88,8 @@ impl CryptoManager {
 
     pub fn decrypt_and_retrieve(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         if self.ciphertext.is_empty() {
-            return Err("No ciphertext available to decrypt".into());
+            return Ok(Vec::new());
         }
-
         let decrypted_data = self.decrypt_data(&self.ciphertext)?;
         Ok(decrypted_data)
     }

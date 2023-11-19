@@ -1,7 +1,8 @@
-#[derive(Default, serde::Serialize, serde::Deserialize)]
+use crate::encryption::CryptoManager;
+
 pub struct PasswordManager {
     records: Vec<CredentialSet>,
-    file_path: String
+    crypto_manager: CryptoManager    
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -13,11 +14,22 @@ pub struct CredentialSet {
 use crate::validation;
 
 impl PasswordManager {
-    pub fn new() -> Self {
-        PasswordManager {
-            records: Vec::new(),
-            file_path: "/tmp/armor_pass.enc".to_string(),
-        }
+
+    pub fn new(armorpass_path: &str, password: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let new_crypto_manager = CryptoManager::new(armorpass_path, password)?;
+        let stored_credentials = new_crypto_manager.decrypt_and_retrieve()?;
+
+         // Deserialize the stored credentials into a Vec<CredentialSet>
+        let deserialized_records = if !stored_credentials.is_empty() {
+            serde_json::from_slice(&stored_credentials)?
+        } else {
+            Vec::new() // Return an empty Vec if no credentials are stored
+        };
+
+        Ok(PasswordManager {
+            records: deserialized_records,
+            crypto_manager: new_crypto_manager
+        })
     }
 
     pub fn store_password(&mut self, identifier: &str, username: &str, password: &str) -> Result<(), String> {
@@ -38,7 +50,7 @@ impl PasswordManager {
 
         self.records.push(new_credentials);
 
-        Self::persist_credentials(&self).map_err(|e| e.to_string())?;
+        Self::persist_credentials(self).map_err(|e| e.to_string())?;
 
         Ok(())
     }
@@ -63,7 +75,7 @@ impl PasswordManager {
         {
             // If found, update the password field.
             record.password = new_password.to_owned();
-            Self::persist_credentials(&self).map_err(|e| e.to_string())?;
+            Self::persist_credentials(self).map_err(|e| e.to_string())?;
             Ok(())
         } else {
             // If not found, return an Err.
@@ -96,12 +108,11 @@ impl PasswordManager {
             .collect()
     }
 
-    fn persist_credentials(&self) -> Result<(), String> {
+    fn persist_credentials(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let json_data = serde_json::to_string(&self.records)
             .map_err(|e| format!("Failed to serialize records to json: {}", e.to_string()))?;
 
-        std::fs::write(&self.file_path, json_data.as_bytes())
-            .map_err(|e| format!("Failed to write credentials to disk: {}", e.to_string()))?;
+        self.crypto_manager.encrypt_and_persist(&json_data.into_bytes())?;
 
         Ok(())
     }
