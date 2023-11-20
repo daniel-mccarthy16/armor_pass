@@ -37,3 +37,22 @@ jobs:
 
     - name: Run tests
       run: cargo test --verbose
+
+# TODO    
+#
+# - name: Build for Windows
+#   run: cargo build --target x86_64-pc-windows-gnu
+# - name: Build for macOS
+#   run: cargo build --target x86_64-apple-darwin
+# - name: Build for Linux
+#   run: cargo build --target x86_64-unknown-linux-gnu
+#
+#
+# - name: Generate Documentation
+#   run: cargo doc --no-deps
+#
+#
+# - name: Generate Code Coverage
+#   run: |
+#     cargo tarpaulin --out Xml
+#     bash <(curl -s https://codecov.io/bash)
