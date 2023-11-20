@@ -1,0 +1,39 @@
+name: ArmorPass CI
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    run-name: CI for PR #${{ github.event.pull_request.number }} (${{ github.head_ref }}) by @${{ github.actor }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: rustfmt, clippy
+        override: true
+
+    - name: Check formatting with rustfmt
+      run: cargo fmt -- --check
+
+    - name: Lint with clippy
+      run: cargo clippy -- -D warnings
+
+    - name: Audit Dependencies for Security Vulnerabilities
+      run: |
+        cargo install cargo-audit
+        cargo audit
+
+    - name: Build
+      run: cargo build --verbose
+
+    - name: Run tests
+      run: cargo test --verbose
