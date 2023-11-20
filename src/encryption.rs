@@ -1,10 +1,10 @@
-use openssl::pkcs5::pbkdf2_hmac;
-use openssl::hash::MessageDigest;
-use openssl::symm::{Cipher, Crypter, Mode};
 use openssl::error::ErrorStack;
-use std::io::{Read, Write};
-use std::fs::File;
+use openssl::hash::MessageDigest;
+use openssl::pkcs5::pbkdf2_hmac;
 use openssl::rand::rand_bytes;
+use openssl::symm::{Cipher, Crypter, Mode};
+use std::fs::File;
+use std::io::{Read, Write};
 
 const ITERATIONS: usize = 100_000;
 const KEY_LENGTH: usize = 32; //32 bytes = 256bit which is the key length size aes_256_cbc expects
@@ -12,17 +12,15 @@ const IV_LENGTH: usize = 16;
 const SALT_LENGTH: usize = 16;
 
 pub struct CryptoManager {
-    salt:  Vec<u8>,
+    salt: Vec<u8>,
     iv: Vec<u8>,
     ciphertext: Vec<u8>,
     key: Vec<u8>,
-    filepath: String
+    filepath: String,
 }
 
 impl CryptoManager {
-
     pub fn new(filepath: &str, password: &str) -> Result<Self, Box<dyn std::error::Error>> {
-
         match File::open(filepath) {
             Ok(mut file) => {
                 let mut salt = vec![0u8; SALT_LENGTH];
@@ -36,30 +34,28 @@ impl CryptoManager {
 
                 let key = CryptoManager::generate_key(password, &salt)?;
 
-                Ok(CryptoManager { 
+                Ok(CryptoManager {
                     salt,
                     iv,
                     ciphertext,
                     key,
-                    filepath : filepath.to_string()
+                    filepath: filepath.to_string(),
                 })
-
             }
             Err(_) => {
                 let salt = CryptoManager::generate_salt(SALT_LENGTH)?;
                 let iv = CryptoManager::generate_iv(IV_LENGTH)?;
                 let key = CryptoManager::generate_key(password, &salt)?;
 
-                Ok(CryptoManager { 
+                Ok(CryptoManager {
                     salt,
                     iv,
                     ciphertext: Vec::new(),
                     key,
-                    filepath : filepath.to_string()
+                    filepath: filepath.to_string(),
                 })
             }
         }
-
     }
 
     pub fn encrypt_and_persist(&mut self, data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
@@ -117,7 +113,13 @@ impl CryptoManager {
     fn generate_key(password: &str, salt: &[u8]) -> Result<Vec<u8>, ErrorStack> {
         let password_bytes = password.as_bytes();
         let mut key = vec![0u8; KEY_LENGTH];
-        pbkdf2_hmac(password_bytes, salt, ITERATIONS, MessageDigest::sha256(), &mut key)?;
+        pbkdf2_hmac(
+            password_bytes,
+            salt,
+            ITERATIONS,
+            MessageDigest::sha256(),
+            &mut key,
+        )?;
         Ok(key)
     }
 }
@@ -216,7 +218,8 @@ mod tests {
 
         let mut file = File::open(TEST_FILE_PATH).expect("Couldn't open fle");
         let mut contents = Vec::new();
-        file.read_to_end(&mut contents).expect("Could not read file");
+        file.read_to_end(&mut contents)
+            .expect("Could not read file");
 
         let iv_from_file = &contents[SALT_LENGTH..(SALT_LENGTH + IV_LENGTH)];
 
@@ -229,7 +232,7 @@ mod tests {
 // ENCRYPTING
 // 1. collect password
 // 2. create random salt of fixed length ( if creating new file ) else use one on file itself
-// 3. feed KDF the salt and pass to generate DERIVED KEY ( OF FIXED LENGTH ) 
+// 3. feed KDF the salt and pass to generate DERIVED KEY ( OF FIXED LENGTH )
 // 4. feed encryption alg the IV and DERIVED KEY to produce CIPHERTEXT
 // 5. write [SALT][IV][CIPHERTEXT] to file
 
