@@ -16,7 +16,6 @@ pub struct CryptoManager {
     iv: Vec<u8>,
     ciphertext: Vec<u8>,
     key: Vec<u8>,
-    password: String,
     filepath: String
 }
 
@@ -41,7 +40,6 @@ impl CryptoManager {
                     salt,
                     iv,
                     ciphertext,
-                    password: password.to_string(),
                     key,
                     filepath : filepath.to_string()
                 })
@@ -56,7 +54,6 @@ impl CryptoManager {
                     salt,
                     iv,
                     ciphertext: Vec::new(),
-                    password: password.to_string(),
                     key,
                     filepath : filepath.to_string()
                 })
@@ -155,7 +152,6 @@ mod tests {
             iv,
             ciphertext: Vec::new(),
             key,
-            password: TEST_PASSWORD.to_string(),
             filepath: TEST_FILE_PATH.to_string(),
         };
 

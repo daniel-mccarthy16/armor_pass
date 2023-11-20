@@ -31,9 +31,9 @@ impl PasswordManager {
 
     pub fn store_password(&mut self, identifier: &str, username: &str, password: &str) -> Result<(), String> {
 
-        validation::validate_password(password).map_err(|e| format!("Password is invalid: {}", e.to_string()))?;
-        validation::validate_username(username).map_err(|e| format!("Username is invalid: {}", e.to_string()))?;
-        validation::validate_identifier(identifier).map_err(|e| format!("Identifier is invalid: {}", e.to_string()))?;
+        validation::validate_password(password).map_err(|e| format!("Password is invalid: {}", e))?;
+        validation::validate_username(username).map_err(|e| format!("Username is invalid: {}", e))?;
+        validation::validate_identifier(identifier).map_err(|e| format!("Identifier is invalid: {}", e))?;
 
         if self.password_is_duplicate(password) {
             return Err("Password must be unique".to_string());
@@ -107,7 +107,7 @@ impl PasswordManager {
 
     fn persist_credentials(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let json_data = serde_json::to_string(&self.records)
-            .map_err(|e| format!("Failed to serialize records to json: {}", e.to_string()))?;
+            .map_err(|e| format!("Failed to serialize records to json: {}", e))?;
 
         self.crypto_manager.encrypt_and_persist(&json_data.into_bytes())?;
 
