@@ -7,7 +7,7 @@ use std::fs::File;
 use openssl::rand::rand_bytes;
 
 const ITERATIONS: usize = 100_000;
-const KEY_LENGTH: usize = 32;
+const KEY_LENGTH: usize = 32; //32 bytes = 256bit which is the key length size aes_256_cbc expects
 const IV_LENGTH: usize = 16;
 const SALT_LENGTH: usize = 16;
 
@@ -112,7 +112,7 @@ impl CryptoManager {
     }
 
     fn generate_iv(length: usize) -> Result<Vec<u8>, ErrorStack> {
-        let mut buffer = vec![0u8; length]; //should match AES block size
+        let mut buffer = vec![0u8; length];
         rand_bytes(&mut buffer)?;
         Ok(buffer)
     }
@@ -122,6 +122,111 @@ impl CryptoManager {
         let mut key = vec![0u8; KEY_LENGTH];
         pbkdf2_hmac(password_bytes, salt, ITERATIONS, MessageDigest::sha256(), &mut key)?;
         Ok(key)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    const TEST_FILE_PATH: &str = "test_file_path";
+    const TEST_PASSWORD: &str = "test_password";
+
+    fn teardown() {
+        let _ = std::fs::remove_file(TEST_FILE_PATH);
+    }
+
+    #[test]
+    fn test_generate_key() {
+        let salt = CryptoManager::generate_salt(SALT_LENGTH).unwrap();
+        let key = CryptoManager::generate_key(TEST_PASSWORD, &salt).unwrap();
+        assert_eq!(key.len(), KEY_LENGTH);
+    }
+
+    #[test]
+    fn test_encrypt_decrypt() {
+        let salt = CryptoManager::generate_salt(SALT_LENGTH).unwrap();
+        let iv = CryptoManager::generate_iv(IV_LENGTH).unwrap();
+        let key = CryptoManager::generate_key(TEST_PASSWORD, &salt).unwrap();
+
+        let crypto_manager = CryptoManager {
+            salt,
+            iv,
+            ciphertext: Vec::new(),
+            key,
+            password: TEST_PASSWORD.to_string(),
+            filepath: TEST_FILE_PATH.to_string(),
+        };
+
+        let data = b"Hello, world!";
+        let encrypted_data = crypto_manager.encrypt_data(data).unwrap();
+        let decrypted_data = crypto_manager.decrypt_data(&encrypted_data).unwrap();
+
+        assert_eq!(decrypted_data, data);
+    }
+
+    #[test]
+    fn test_generate_salt() {
+        let salt = CryptoManager::generate_salt(SALT_LENGTH).unwrap();
+        assert_eq!(salt.len(), SALT_LENGTH);
+    }
+
+    #[test]
+    fn test_generate_iv() {
+        let iv = CryptoManager::generate_iv(IV_LENGTH).unwrap();
+        assert_eq!(iv.len(), IV_LENGTH);
+    }
+
+    #[test]
+    fn test_new_instance_creation() {
+        let instance = CryptoManager::new(TEST_FILE_PATH, TEST_PASSWORD);
+        assert!(instance.is_ok());
+    }
+
+    #[test]
+    fn test_encrypt_and_persist_method() {
+        let mut crypto_manager = CryptoManager::new(TEST_FILE_PATH, TEST_PASSWORD).unwrap();
+        let data = b"Test data";
+        let result = crypto_manager.encrypt_and_persist(data);
+        assert!(result.is_ok());
+        teardown();
+    }
+
+    #[test]
+    fn test_salt_stored_correctly_in_encrypted_file() {
+        let mut crypto_manager = CryptoManager::new(TEST_FILE_PATH, TEST_PASSWORD).unwrap();
+        let data = b"Test data";
+
+        let _ = crypto_manager.encrypt_and_persist(data);
+
+        let mut file = File::open(TEST_FILE_PATH).expect("Couldnt open file");
+        let mut contents = Vec::new();
+        file.read_to_end(&mut contents).expect("Couldnt read file");
+
+        let salt_from_file = &contents[0..SALT_LENGTH];
+
+        assert_eq!(salt_from_file, crypto_manager.salt.as_slice());
+
+        teardown();
+    }
+
+    #[test]
+    fn test_iv_stored_correctly_in_encrypted_file() {
+        let mut crypto_manager = CryptoManager::new(TEST_FILE_PATH, TEST_PASSWORD).unwrap();
+        let data = b"Test data";
+
+        let _ = crypto_manager.encrypt_and_persist(data);
+
+        let mut file = File::open(TEST_FILE_PATH).expect("Couldn't open fle");
+        let mut contents = Vec::new();
+        file.read_to_end(&mut contents).expect("Could not read file");
+
+        let iv_from_file = &contents[SALT_LENGTH..(SALT_LENGTH + IV_LENGTH)];
+
+        assert_eq!(iv_from_file, crypto_manager.iv.as_slice());
+
+        teardown();
     }
 }
 
@@ -137,8 +242,5 @@ impl CryptoManager {
 // 2. use SALT / PASS to generate DERIVED KEY
 // 3. use DERIVED KEY and IV to generate PLAINTEXT from CIPHERTEXT
 //
-//
 // NOTES
 // create salt only on file creation
-// NEW IV EVERYTIME REQUIRED
-// Not everything should be public right? 

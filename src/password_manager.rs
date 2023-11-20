@@ -18,14 +18,11 @@ impl PasswordManager {
     pub fn new(armorpass_path: &str, password: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let new_crypto_manager = CryptoManager::new(armorpass_path, password)?;
         let stored_credentials = new_crypto_manager.decrypt_and_retrieve()?;
-
-         // Deserialize the stored credentials into a Vec<CredentialSet>
         let deserialized_records = if !stored_credentials.is_empty() {
             serde_json::from_slice(&stored_credentials)?
         } else {
-            Vec::new() // Return an empty Vec if no credentials are stored
+            Vec::new()
         };
-
         Ok(PasswordManager {
             records: deserialized_records,
             crypto_manager: new_crypto_manager

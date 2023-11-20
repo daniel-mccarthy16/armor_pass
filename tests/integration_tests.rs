@@ -177,6 +177,7 @@ fn it_does_not_allow_empty_passwords() {
     );
     teardown();
 }
+
 #[test]
 fn it_does_not_allow_identical_passwords() {
     let mut password_manager = PasswordManager::new("/tmp/armorpass.enc", MASTERPASSWORD).expect("could not create password manager");

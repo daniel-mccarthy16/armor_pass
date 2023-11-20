@@ -44,3 +44,27 @@ fn is_at_least_three_characters_long(password: &str) -> bool {
     password.len() >= 3
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_password() {
+        assert_eq!(validate_password("ikwefwefwdfss567!%^LOL"), Ok(()));
+        assert_eq!(validate_password("fs567!%^LOL"), Err("Password must be at least 14 characters long"));
+        assert_eq!(validate_password("ikwefwefwdfss!%^LOL"), Err("Password must contain at least three digits"));
+        assert_eq!(validate_password("ikwefwefwdfss567!%^"), Err("Password must contain at least three uppercase letters"));
+    }
+
+    #[test]
+    fn test_validate_username() {
+        assert_eq!(validate_username("user"), Ok(()));
+        assert_eq!(validate_username("us"), Err("Username must be at least 3 characters long"));
+    }
+
+    #[test]
+    fn test_validate_identifier() {
+        assert_eq!(validate_identifier("id123"), Ok(()));
+        assert_eq!(validate_identifier("id"), Err("Identifier must be at least 3 characters long"));
+    }
+}
