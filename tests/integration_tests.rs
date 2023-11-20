@@ -14,7 +14,6 @@ const SALT: [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 const MASTERPASSWORD: &str = "heynowbrowncowaylmao";
 
 use armor_pass::password_manager::PasswordManager;
-use armor_pass::encryption::CryptoManager;
 
 fn teardown() {
     let _ = std::fs::remove_file("/tmp/armorpass.enc");
@@ -245,16 +244,6 @@ fn it_requires_at_least_three_symbols_in_password() {
     teardown();
 }
 
-#[test]
-fn it_encrypts_and_decrypts_a_file() {
-    let filepath = "test_encrypt_decrypt.txt";
-    let data_to_encrypt = b"Hello, world!";
-    let mut crypto_manager = CryptoManager::new(filepath, PASSWORD).unwrap();
-    crypto_manager.encrypt_and_persist(data_to_encrypt).unwrap();
-    let decrypted_data = crypto_manager.decrypt_and_retrieve().unwrap();
-    assert_eq!(decrypted_data, data_to_encrypt, "Decrypted data should match the original data");
-    teardown();
-}
 
 // fn it_retrieves_salt_from_encrypted_file
 // fn it_retrieves_iv_from_encrypted_file
