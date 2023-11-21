@@ -39,6 +39,12 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
 
+    - name: Install cargo-tarpaulin
+      run: cargo install cargo-tarpaulin
+
+    - name: Run cargo-tarpaulin
+      run: cargo tarpaulin --out Xml --output-dir ./coverage
+
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
       env:
