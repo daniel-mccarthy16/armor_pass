@@ -1,4 +1,7 @@
 use crate::encryption::CryptoManager;
+use crate::validation;
+
+use std::path::PathBuf;
 
 pub struct PasswordManager {
     records: Vec<CredentialSet>,
@@ -11,11 +14,10 @@ pub struct CredentialSet {
     username: String,
     password: String,
 }
-use crate::validation;
 
 impl PasswordManager {
-    pub fn new(armorpass_path: &str, password: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let new_crypto_manager = CryptoManager::new(armorpass_path, password)?;
+    pub fn new(armorpass_path: PathBuf, password: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let new_crypto_manager = CryptoManager::new(&armorpass_path, password)?;
         let stored_credentials = new_crypto_manager.decrypt_and_retrieve()?;
         let deserialized_records = if !stored_credentials.is_empty() {
             serde_json::from_slice(&stored_credentials)?
