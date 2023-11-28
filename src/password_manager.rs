@@ -1,5 +1,5 @@
 use crate::encryption::CryptoManager;
-use crate::utility::{validate_identifier, validate_username};
+use crate::utility::validate_identifier;
 
 use std::path::PathBuf;
 
@@ -48,7 +48,6 @@ impl PasswordManager {
             return Err("Username must be unique".to_string());
         }
 
-        validate_username(username)?;
         validate_identifier(identifier)?;
 
         let new_credentials = CredentialSet {

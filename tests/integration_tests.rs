@@ -6,7 +6,7 @@ const NEW_PASSWORD: &str = "x@^*ssw93un1klm";
 const USERNAME2: &str = "muhseconduser";
 const PASSWORD2: &str = "P@&^ssW07rd1opI";
 const IDENTIFIER: &str = "website.com";
-const SALT: [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+//const SALT: [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 const MASTERPASSWORD: &str = "heynowbrowncowaylmao";
 
 use armor_pass::password_manager::PasswordManager;

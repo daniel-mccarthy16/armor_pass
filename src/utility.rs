@@ -1,13 +1,6 @@
 use crate::password_manager::CredentialSet;
 use prettytable::{row, Cell, Row, Table};
 
-pub fn validate_username(username: &str) -> Result<(), &str> {
-    if !is_at_least_three_characters_long(username) {
-        Err("Username must be at least 3 characters long")
-    } else {
-        Ok(())
-    }
-}
 
 pub fn validate_identifier(identifier: &str) -> Result<(), &str> {
     if !is_at_least_three_characters_long(identifier) {
@@ -48,15 +41,6 @@ pub fn print_credential(credential: &CredentialSet) {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_validate_username() {
-        assert_eq!(validate_username("user"), Ok(()));
-        assert_eq!(
-            validate_username("us"),
-            Err("Username must be at least 3 characters long")
-        );
-    }
 
     #[test]
     fn test_validate_identifier() {

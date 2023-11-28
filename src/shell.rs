@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 enum Command {
     Create(CreatePasswordOptions),
-    Delete,
+    Delete(DeletePasswordOptions),
     Retrieve(RetrievePasswordOptions),
     Update,
     Quit,
@@ -27,11 +27,17 @@ struct RetrievePasswordOptions {
     username: Option<String>,
 }
 
+#[derive(Default)]
+struct DeletePasswordOptions{
+    identifier: Option<String>,
+    username: Option<String>,
+}
+
 impl Command {
     fn from_str(command_str: &str) -> Option<Command> {
         match command_str {
             "create" => Some(Command::Create(CreatePasswordOptions::default())),
-            "delete" => Some(Command::Delete),
+            "delete" => Some(Command::Delete(DeletePasswordOptions::default())),
             "retrieve" => Some(Command::Retrieve(RetrievePasswordOptions::default())),
             "update" => Some(Command::Update),
             "quit" => Some(Command::Quit),
@@ -43,7 +49,7 @@ impl Command {
     fn execute(&mut self, shell: &mut Shell) {
         match self {
             Command::Create(options) => shell.handle_create_command(options),
-            Command::Delete => shell.handle_delete_command(),
+            Command::Delete(options) => shell.handle_delete_command(options),
             Command::Retrieve(options) => shell.handle_retrieve_command(options),
             Command::Update => shell.handle_update_command(),
             Command::Quit => shell.should_terminate = true,
@@ -178,9 +184,27 @@ impl Shell {
         self.state = ShellState::MainPrompt;
     }
 
-    fn handle_delete_command(&self) {
-        todo!()
+    fn handle_delete_command(&mut self, options: &mut DeletePasswordOptions) {
+        options.identifier = Some(self.prompt("Enter identifier: "));
+        options.username = Some(self.prompt("Enter username: "));
+        let password_manager = self.get_password_manager_mut();
+        let identifier_ref = options
+            .identifier
+            .as_deref()
+            .expect("[error]: could not source an identifier for password creation");
+        let username_ref = options
+            .username
+            .as_deref()
+            .expect("[error]: could not source an username for password creation");
+
+        match password_manager.delete_credential(identifier_ref, username_ref) {
+            Ok(_) => { 
+                println!("successfully deleted credential with identifer: {} and username: {}", identifier_ref, username_ref);
+            },
+            Err(e) => eprintln!("ERROR: {e}")
+        }
     }
+
     fn handle_retrieve_command(&mut self, options: &mut RetrievePasswordOptions) {
         options.identifier = Some(self.prompt("Enter identifier (e.g., 'league of legends'): "));
         let username_input =
@@ -193,7 +217,7 @@ impl Shell {
         let identifier_ref = options
             .identifier
             .as_deref()
-            .expect("[Error]: could not source an identifier for password creation");
+            .expect("[error]: could not source an identifier for password creation");
         let password_manager = self.get_password_manager_mut();
         match options.username.as_ref().map(|s| s.as_str()) {
             Some(username_ref) => {
@@ -255,3 +279,4 @@ impl Shell {
             .expect("[Error]: havent yet unencrypted file for operation, authentication required")
     }
 }
+
