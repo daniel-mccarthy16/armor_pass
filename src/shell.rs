@@ -3,19 +3,26 @@ use crate::generator::PasswordGeneratorOptions;
 use crate::password_manager::PasswordManager;
 use crate::utility::print_credential;
 use crate::utility::print_credential_list;
-use std::io::{stdin, stdout, Write};
+use crate::utility::prompt;
 use std::path::PathBuf;
 
 enum Command {
     Create(CreatePasswordOptions),
     Delete(DeletePasswordOptions),
     Retrieve(RetrievePasswordOptions),
-    Update,
+    Update(UpdatePasswordOptions),
     Quit,
 }
 
 #[derive(Default)]
 struct CreatePasswordOptions {
+    identifier: Option<String>,
+    username: Option<String>,
+    password_generator_options: PasswordGeneratorOptions,
+}
+
+#[derive(Default)]
+struct UpdatePasswordOptions {
     identifier: Option<String>,
     username: Option<String>,
     password_generator_options: PasswordGeneratorOptions,
@@ -28,7 +35,7 @@ struct RetrievePasswordOptions {
 }
 
 #[derive(Default)]
-struct DeletePasswordOptions{
+struct DeletePasswordOptions {
     identifier: Option<String>,
     username: Option<String>,
 }
@@ -39,7 +46,7 @@ impl Command {
             "create" => Some(Command::Create(CreatePasswordOptions::default())),
             "delete" => Some(Command::Delete(DeletePasswordOptions::default())),
             "retrieve" => Some(Command::Retrieve(RetrievePasswordOptions::default())),
-            "update" => Some(Command::Update),
+            "update" => Some(Command::Update(UpdatePasswordOptions::default())),
             "quit" => Some(Command::Quit),
             "exit" => Some(Command::Quit),
             _ => None,
@@ -51,7 +58,7 @@ impl Command {
             Command::Create(options) => shell.handle_create_command(options),
             Command::Delete(options) => shell.handle_delete_command(options),
             Command::Retrieve(options) => shell.handle_retrieve_command(options),
-            Command::Update => shell.handle_update_command(),
+            Command::Update(options) => shell.handle_update_command(options),
             Command::Quit => shell.should_terminate = true,
         }
     }
@@ -87,25 +94,15 @@ impl Shell {
         Shell::default()
     }
 
-    fn prompt(&self, prompttext: &str) -> String {
-        print!(">> {}", prompttext);
-        stdout().flush().unwrap();
-
-        let mut input = String::new();
-        stdin().read_line(&mut input).expect("Failed to read line");
-
-        input.trim().to_string()
-    }
-
     pub fn run(&mut self) {
         while !self.should_terminate {
             match self.state {
                 ShellState::MainPrompt => {
-                    let input = self.prompt("Enter a command: ");
+                    let input = prompt("Enter a command: ");
                     self.handle_main_command(&input);
                 }
                 ShellState::AuthenticatePrompt => {
-                    let masterpassword = self.prompt("Please enter your master password sir: ");
+                    let masterpassword = prompt("Please enter your master password sir: ");
                     self.handle_authentication_prompt(&masterpassword);
                 }
             }
@@ -144,24 +141,12 @@ impl Shell {
     }
 
     fn handle_create_command(&mut self, options: &mut CreatePasswordOptions) {
-        options.identifier = Some(self.prompt("Enter identifier (e.g., 'league of legends'): "));
-        options.username =
-            Some(self.prompt("Enter username, can have multiple usernames per identifier: "));
+        options.identifier = Some(prompt("Enter identifier (e.g., 'league of legends'): "));
+        options.username = Some(prompt(
+            "Enter username, can have multiple usernames per identifier: ",
+        ));
 
-        options.password_generator_options.length =
-            self.prompt_for_number("Enter desired length (default 20): ");
-
-        options.password_generator_options.min_uppercase =
-            self.prompt_for_number("Enter minimum number of uppercase characters (default 0): ");
-
-        options.password_generator_options.min_special_characters =
-            self.prompt_for_number("Enter minimum number of special characters (default 0: ");
-
-        options.password_generator_options.min_numbers =
-            self.prompt_for_number("Enter minimum number of numbers (default 0): ");
-
-        options.password_generator_options.unicode =
-            Some(self.prompt_for_confirmation("Do you want to use unicode? (default no): "));
+        options.password_generator_options.prompt_for_options();
 
         // After collecting all options.password_generator_options, create the PasswordGenerator
         let password_generator = PasswordGenerator::new(&options.password_generator_options);
@@ -185,8 +170,8 @@ impl Shell {
     }
 
     fn handle_delete_command(&mut self, options: &mut DeletePasswordOptions) {
-        options.identifier = Some(self.prompt("Enter identifier: "));
-        options.username = Some(self.prompt("Enter username: "));
+        options.identifier = Some(prompt("Enter identifier: "));
+        options.username = Some(prompt("Enter username: "));
         let password_manager = self.get_password_manager_mut();
         let identifier_ref = options
             .identifier
@@ -198,17 +183,20 @@ impl Shell {
             .expect("[error]: could not source an username for password creation");
 
         match password_manager.delete_credential(identifier_ref, username_ref) {
-            Ok(_) => { 
-                println!("successfully deleted credential with identifer: {} and username: {}", identifier_ref, username_ref);
-            },
-            Err(e) => eprintln!("ERROR: {e}")
+            Ok(_) => {
+                println!(
+                    "successfully deleted credential with identifer: {} and username: {}",
+                    identifier_ref, username_ref
+                );
+            }
+            Err(e) => eprintln!("ERROR: {e}"),
         }
     }
 
     fn handle_retrieve_command(&mut self, options: &mut RetrievePasswordOptions) {
-        options.identifier = Some(self.prompt("Enter identifier (e.g., 'league of legends'): "));
+        options.identifier = Some(prompt("Enter identifier (e.g., 'league of legends'): "));
         let username_input =
-            self.prompt("Enter an optional username, can have multiple usernames per identifier: ");
+            prompt("Enter an optional username, can have multiple usernames per identifier: ");
         options.username = if username_input.trim().is_empty() {
             None
         } else {
@@ -241,35 +229,40 @@ impl Shell {
         }
     }
 
-    fn handle_update_command(&self) {
-        todo!()
-    }
+    fn handle_update_command(&mut self, options: &mut UpdatePasswordOptions) {
+        options.identifier = Some(prompt("enter identifier (e.g., 'league of legends'): "));
+        options.username = Some(prompt(
+            "enter username, can have multiple usernames per identifier: ",
+        ));
 
-    // Helper method to prompt for a number with a default value
-    fn prompt_for_number(&self, prompt: &str) -> Option<usize> {
-        let input = self.prompt(prompt);
-        if input.trim().is_empty() {
-            None
-        } else {
-            input.trim().parse().ok()
-        }
-    }
+        options.password_generator_options.prompt_for_options();
 
-    fn prompt_for_confirmation(&self, prompt: &str) -> bool {
-        let input = self.prompt(prompt).trim().to_lowercase();
-        match input.as_str() {
-            "y" | "yes" => true,
-            _ => false,
-        }
-    }
+        // after collecting all options.password_generator_options, create the passwordgenerator
+        let password_generator = PasswordGenerator::new(&options.password_generator_options);
 
-    // Helper method to prompt with a default string value
-    fn prompt_with_default(&self, prompt: &str, default: &str) -> String {
-        let input = self.prompt(prompt);
-        if input.is_empty() {
-            default.to_string()
-        } else {
-            input
+        // use password_generator to generate password or perform next steps
+        let password = password_generator.generate();
+
+        let identifier_ref = options
+            .identifier
+            .as_deref()
+            .expect("[error]: could not source an identifier for password creation");
+        let username_ref = options
+            .username
+            .as_deref()
+            .expect("[error]: could not source an identifier for password creation");
+        let password_manager = self.get_password_manager_mut();
+
+        match password_manager.update_password(identifier_ref, username_ref, &password) {
+            Ok(_) => {
+                println!(
+                    "succesfully updated password for identifier: {} with username: {}",
+                    identifier_ref, username_ref
+                )
+            }
+            Err(e) => {
+                eprintln!("error: {}", e)
+            }
         }
     }
 
@@ -279,4 +272,3 @@ impl Shell {
             .expect("[Error]: havent yet unencrypted file for operation, authentication required")
     }
 }
-

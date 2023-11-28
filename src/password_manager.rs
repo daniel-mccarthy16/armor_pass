@@ -39,7 +39,6 @@ impl PasswordManager {
         username: &str,
         password: &str,
     ) -> Result<(), String> {
-
         if self.password_is_duplicate(password) {
             return Err("Password must be unique".to_string());
         }

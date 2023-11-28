@@ -1,4 +1,5 @@
 use rand::{distributions::Uniform, seq::SliceRandom, Rng};
+use crate::utility::{prompt_for_number, prompt_for_confirmation};
 
 #[derive(Default)]
 pub struct PasswordGeneratorOptions {
@@ -7,6 +8,26 @@ pub struct PasswordGeneratorOptions {
     pub min_numbers: Option<usize>,
     pub min_special_characters: Option<usize>,
     pub unicode: Option<bool>,
+}
+
+impl PasswordGeneratorOptions {
+    pub fn prompt_for_options(&mut self) {
+        self.length =
+            prompt_for_number("Enter desired length (default 20): ");
+
+        self.min_uppercase =
+            prompt_for_number("Enter minimum number of uppercase characters (default 0): ");
+
+        self.min_special_characters =
+            prompt_for_number("Enter minimum number of special characters (default 0: ");
+
+        self.min_numbers =
+            prompt_for_number("Enter minimum number of numbers (default 0): ");
+
+        self.unicode = Some(prompt_for_confirmation(
+            "Do you want to use unicode? (default no): ",
+        ));
+    }
 }
 
 #[derive(Default)]
