@@ -39,8 +39,13 @@ impl PasswordManager {
         username: &str,
         password: &str,
     ) -> Result<(), String> {
+
         if self.password_is_duplicate(password) {
             return Err("Password must be unique".to_string());
+        }
+
+        if self.username_is_duplicate(username) {
+            return Err("Username must be unique".to_string());
         }
 
         validate_username(username)?;
@@ -55,11 +60,6 @@ impl PasswordManager {
         self.records.push(new_credentials);
 
         Self::persist_credentials(self).map_err(|e| e.to_string())?;
-
-        println!(
-            "Successfully stored password for identifier: {}, with username: {} and password of {}",
-            identifier, username, password
-        );
 
         Ok(())
     }
@@ -150,5 +150,11 @@ impl PasswordManager {
         self.records
             .iter()
             .any(|record| record.password == password)
+    }
+
+    fn username_is_duplicate(&self, username: &str) -> bool {
+        self.records
+            .iter()
+            .any(|record| record.username == username)
     }
 }

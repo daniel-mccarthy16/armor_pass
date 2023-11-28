@@ -6,10 +6,6 @@ const NEW_PASSWORD: &str = "x@^*ssw93un1klm";
 const USERNAME2: &str = "muhseconduser";
 const PASSWORD2: &str = "P@&^ssW07rd1opI";
 const IDENTIFIER: &str = "website.com";
-const PASSWORD_FEW_UPPERCASE: &str = "password@p14ass";
-const PASSWORD_FEW_DIGITS: &str = "passwo1d@passdfe";
-const PASSWORD_FEW_SYMBOLS: &str = "passrd123456abcx";
-const SHORT_PASSWORD: &str = "!@236azxbcx*";
 const SALT: [u8; 16] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 const MASTERPASSWORD: &str = "heynowbrowncowaylmao";
 
@@ -31,9 +27,7 @@ fn it_stores_a_password() {
     let tmpfile = generate_unique_file_path();
     let mut password_manager = PasswordManager::new(tmpfile.clone(), MASTERPASSWORD)
         .expect("could not create password manager");
-    // println!("muh {:?}", password_manager);
     let result = password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD);
-    println!("result is X: {:?}", result);
     assert_eq!(result.is_ok(), true);
     assert!(password_manager.has_password(IDENTIFIER, USERNAME));
     teardown(&tmpfile);
@@ -239,6 +233,29 @@ fn it_does_not_allow_identical_passwords() {
     assert!(
         second_store_result.is_err(),
         "Storing an identical password for the same identifier and username should not be allowed."
+    );
+    teardown(&tmpfile);
+}
+
+#[test]
+fn it_does_not_allow_identical_usernames_for_same_identifier() {
+    let tmpfile = generate_unique_file_path();
+    let mut password_manager = PasswordManager::new(tmpfile.clone(), MASTERPASSWORD)
+        .expect("could not create password manager");
+
+    // Store a password for the first time.
+    let first_store_result = password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD);
+    assert_eq!(
+        first_store_result,
+        Ok(()),
+        "The first attempt to store a password should succeed."
+    );
+
+    // Attempt to store the same password again.
+    let second_store_result = password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD2);
+    assert!(
+        second_store_result.is_err(),
+        "Storing an identical username + identifier combination should error out"
     );
     teardown(&tmpfile);
 }
