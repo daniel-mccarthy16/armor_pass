@@ -35,7 +35,6 @@ impl CryptoManager {
 
                 let key = CryptoManager::generate_key(password, &salt)?;
 
-
                 Ok(CryptoManager {
                     salt,
                     iv,
@@ -162,7 +161,7 @@ mod tests {
             iv,
             ciphertext: Vec::new(),
             key,
-            filepath: testfilepath.clone()
+            filepath: testfilepath.clone(),
         };
 
         let data = b"Hello, world!";

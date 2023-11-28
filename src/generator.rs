@@ -2,14 +2,12 @@ use rand::{distributions::Uniform, seq::SliceRandom, Rng};
 
 #[derive(Default)]
 pub struct PasswordGeneratorOptions {
-    pub identifier: Option<String>,
     pub length: Option<usize>,
     pub min_uppercase: Option<usize>,
     pub min_numbers: Option<usize>,
     pub min_special_characters: Option<usize>,
     pub unicode: Option<bool>,
 }
-
 
 #[derive(Default)]
 pub struct PasswordGenerator {
@@ -22,9 +20,7 @@ pub struct PasswordGenerator {
 
 impl PasswordGenerator {
     // Constructor to create a new PasswordGenerator with specified parameters
-    pub fn new(
-        options: &PasswordGeneratorOptions
-    ) -> Self {
+    pub fn new(options: &PasswordGeneratorOptions) -> Self {
         PasswordGenerator {
             length: options.length.unwrap_or(20),
             min_uppercase: options.min_uppercase.unwrap_or(0),
@@ -55,7 +51,6 @@ impl PasswordGenerator {
         for _ in 0..self.min_special_characters {
             password.push(self.generate_random_special_char(&mut rng));
         }
-
 
         for _ in 0..self.min_uppercase {
             password.push(self.generate_random_uppercase(&mut rng));
@@ -118,8 +113,7 @@ impl PasswordGenerator {
             // Generate a random Unicode scalar value
             let char_candidate = std::char::from_u32(rng.gen_range(0x0000..=0x10FFFF));
 
-            if let Some(char_candidate) = char_candidate { 
-
+            if let Some(char_candidate) = char_candidate {
                 // Check if the character is in any of the blacklisted ranges
                 let in_blacklist_range = blacklist_ranges.iter().any(|&(start, end)| {
                     char_candidate as u32 >= start && char_candidate as u32 <= end
@@ -128,13 +122,10 @@ impl PasswordGenerator {
                 // Check if the character is a blacklisted single character
                 let is_blacklisted_char = blacklist_single_chars.contains(&char_candidate);
 
-                
                 if !in_blacklist_range && !is_blacklisted_char {
                     return char_candidate;
                 }
             }
-
-
         }
     }
 }
@@ -195,7 +186,10 @@ mod tests {
         let generator = PasswordGenerator::new(&options);
         let password = generator.generate();
 
-        assert!(password.chars().all(|c| special_chars.contains(&c)), "non special character found");
+        assert!(
+            password.chars().all(|c| special_chars.contains(&c)),
+            "non special character found"
+        );
     }
 
     #[test]

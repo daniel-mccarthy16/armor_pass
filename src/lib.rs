@@ -1,6 +1,6 @@
 pub mod encryption;
 mod generator;
-mod shell;
 pub mod password_manager;
+mod shell;
 mod storage;
-mod validation;
+mod utility;

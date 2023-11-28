@@ -1,5 +1,5 @@
 use crate::encryption::CryptoManager;
-use crate::validation;
+use crate::utility::{validate_identifier, validate_username};
 
 use std::path::PathBuf;
 
@@ -8,15 +8,18 @@ pub struct PasswordManager {
     crypto_manager: CryptoManager,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct CredentialSet {
-    identifier: String,
-    username: String,
-    password: String,
+    pub identifier: String,
+    pub username: String,
+    pub password: String,
 }
 
 impl PasswordManager {
-    pub fn new(armorpass_path: PathBuf, password: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        armorpass_path: PathBuf,
+        password: &str,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let new_crypto_manager = CryptoManager::new(&armorpass_path, password)?;
         let stored_credentials = new_crypto_manager.decrypt_and_retrieve()?;
         let deserialized_records = if !stored_credentials.is_empty() {
@@ -36,16 +39,12 @@ impl PasswordManager {
         username: &str,
         password: &str,
     ) -> Result<(), String> {
-        validation::validate_password(password)
-            .map_err(|e| format!("Password is invalid: {}", e))?;
-        validation::validate_username(username)
-            .map_err(|e| format!("Username is invalid: {}", e))?;
-        validation::validate_identifier(identifier)
-            .map_err(|e| format!("Identifier is invalid: {}", e))?;
-
         if self.password_is_duplicate(password) {
             return Err("Password must be unique".to_string());
         }
+
+        validate_username(username)?;
+        validate_identifier(identifier)?;
 
         let new_credentials = CredentialSet {
             identifier: identifier.to_string(),
@@ -57,6 +56,11 @@ impl PasswordManager {
 
         Self::persist_credentials(self).map_err(|e| e.to_string())?;
 
+        println!(
+            "Successfully stored password for identifier: {}, with username: {} and password of {}",
+            identifier, username, password
+        );
+
         Ok(())
     }
 
@@ -66,11 +70,16 @@ impl PasswordManager {
             .any(|record| record.identifier == identifier && record.username == username)
     }
 
-    pub fn retrieve_password(&self, identifier: &str, username: &str) -> Option<&str> {
-        self.records
+    pub fn retrieve_password(&self, identifier: &str, username: &str) -> Option<&CredentialSet> {
+        if let Some(record) = self
+            .records
             .iter()
             .find(|&record| record.identifier == identifier && record.username == username)
-            .map(|record| record.password.as_str())
+        {
+            Some(record)
+        } else {
+            None
+        }
     }
 
     pub fn update_password(

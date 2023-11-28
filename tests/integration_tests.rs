@@ -59,11 +59,11 @@ fn it_retrieves_the_correct_password() {
     let _ = password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD);
     let _ = password_manager.store_password(IDENTIFIER, USERNAME2, PASSWORD2);
 
-    let retrieved_password = password_manager.retrieve_password(IDENTIFIER, USERNAME);
-    assert_eq!(retrieved_password, Some(PASSWORD));
+    let retrieved_credential = password_manager.retrieve_password(IDENTIFIER, USERNAME);
+    assert_eq!(retrieved_credential.unwrap().password, PASSWORD);
 
-    let retrieved_password2 = password_manager.retrieve_password(IDENTIFIER, USERNAME2);
-    assert_eq!(retrieved_password2, Some(PASSWORD2));
+    let retrieved_credential2 = password_manager.retrieve_password(IDENTIFIER, USERNAME2);
+    assert_eq!(retrieved_credential2.unwrap().password, PASSWORD2);
     teardown(&tmpfile);
 }
 
@@ -89,10 +89,10 @@ fn it_really_updates_the_password() {
         .expect("could not create password manager");
     let _ = password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD);
     let _ = password_manager.update_password(IDENTIFIER, USERNAME, NEW_PASSWORD);
-    let retrieved_password = password_manager.retrieve_password(IDENTIFIER, USERNAME);
+    let retrieved_credential = password_manager.retrieve_password(IDENTIFIER, USERNAME);
     assert_eq!(
-        retrieved_password,
-        Some(NEW_PASSWORD),
+        retrieved_credential.unwrap().password,
+        NEW_PASSWORD,
         "Password should be updated to new password."
     );
     teardown(&tmpfile);
@@ -106,10 +106,10 @@ fn updating_a_particular_credential_set_does_not_affect_others() {
     let _ = password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD);
     let _ = password_manager.store_password(IDENTIFIER, USERNAME2, PASSWORD2);
     let _ = password_manager.update_password(IDENTIFIER, USERNAME, NEW_PASSWORD);
-    let retrieved_password2 = password_manager.retrieve_password(IDENTIFIER, USERNAME2);
+    let retrieved_credentials = password_manager.retrieve_password(IDENTIFIER, USERNAME2);
     assert_eq!(
-        retrieved_password2,
-        Some(PASSWORD2),
+        retrieved_credentials.unwrap().password,
+        PASSWORD2,
         "Password for second user should remain unchanged."
     );
     teardown(&tmpfile);
@@ -125,8 +125,8 @@ fn deleting_a_particular_credential_set_does_not_affect_others() {
     let _ = password_manager.update_password(IDENTIFIER, USERNAME, NEW_PASSWORD);
     let retrieved_password2 = password_manager.retrieve_password(IDENTIFIER, USERNAME2);
     assert_eq!(
-        retrieved_password2,
-        Some(PASSWORD2),
+        retrieved_password2.unwrap().password,
+        PASSWORD2,
         "Password for second user should remain unchanged."
     );
     teardown(&tmpfile);
@@ -163,11 +163,11 @@ fn it_cannot_retrieve_a_deleted_password() {
     );
 
     // Attempt to retrieve the deleted password
-    let retrieved_password = password_manager.retrieve_password(IDENTIFIER, USERNAME);
+    let retrieved_credential = password_manager.retrieve_password(IDENTIFIER, USERNAME);
 
     // Assert that the password cannot be retrieved after deletion
-    assert_eq!(
-        retrieved_password, None,
+    assert!(
+        retrieved_credential.is_none(),
         "A deleted password should not be retrievable."
     );
     teardown(&tmpfile);
@@ -220,34 +220,6 @@ fn it_does_not_allow_identifiers_with_less_than_3_characters() {
     teardown(&tmpfile);
 }
 
-//
-#[test]
-fn it_does_not_allow_empty_usernames() {
-    let tmpfile = generate_unique_file_path();
-    let mut password_manager = PasswordManager::new(tmpfile.clone(), MASTERPASSWORD)
-        .expect("could not create password manager");
-    let store_result = password_manager.store_password(IDENTIFIER, "", PASSWORD);
-
-    assert!(
-        store_result.is_err(),
-        "Passwords should not be allowed to be stored with an empty username."
-    );
-    teardown(&tmpfile);
-}
-
-#[test]
-fn it_does_not_allow_empty_passwords() {
-    let tmpfile = generate_unique_file_path();
-    let mut password_manager = PasswordManager::new(tmpfile.clone(), MASTERPASSWORD)
-        .expect("could not create password manager");
-    let store_result = password_manager.store_password(IDENTIFIER, USERNAME, "");
-    assert!(
-        store_result.is_err(),
-        "Passwords should not be allowed to be stored when empty."
-    );
-    teardown(&tmpfile);
-}
-
 #[test]
 fn it_does_not_allow_identical_passwords() {
     let tmpfile = generate_unique_file_path();
@@ -267,61 +239,6 @@ fn it_does_not_allow_identical_passwords() {
     assert!(
         second_store_result.is_err(),
         "Storing an identical password for the same identifier and username should not be allowed."
-    );
-    teardown(&tmpfile);
-}
-
-#[test]
-fn it_does_not_allow_passwords_shorter_than_fourteen_characters() {
-    let tmpfile = generate_unique_file_path();
-    let mut password_manager = PasswordManager::new(tmpfile.clone(), MASTERPASSWORD)
-        .expect("could not create password manager");
-    // Attempt to store a short password.
-    let store_result = password_manager.store_password(IDENTIFIER, USERNAME, SHORT_PASSWORD);
-    // Assert that storing a password with fewer than 10 characters fails.
-    assert!(
-        store_result.is_err(),
-        "Passwords with fewer than 14 characters should not be allowed."
-    );
-    teardown(&tmpfile);
-}
-
-#[test]
-fn it_requires_at_least_three_uppercase_letters_in_password() {
-    let tmpfile = generate_unique_file_path();
-    let mut password_manager = PasswordManager::new(tmpfile.clone(), MASTERPASSWORD)
-        .expect("could not create password manager");
-    let store_result =
-        password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD_FEW_UPPERCASE);
-    assert!(
-        store_result.is_err(),
-        "Passwords must contain at least three uppercase letters."
-    );
-    teardown(&tmpfile);
-}
-
-#[test]
-fn it_requires_at_least_three_digits_in_password() {
-    let tmpfile = generate_unique_file_path();
-    let mut password_manager = PasswordManager::new(tmpfile.clone(), MASTERPASSWORD)
-        .expect("could not create password manager");
-    let store_result = password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD_FEW_DIGITS);
-    assert!(
-        store_result.is_err(),
-        "Passwords must contain at least three digits."
-    );
-    teardown(&tmpfile);
-}
-
-#[test]
-fn it_requires_at_least_three_symbols_in_password() {
-    let tmpfile = generate_unique_file_path();
-    let mut password_manager = PasswordManager::new(tmpfile.clone(), MASTERPASSWORD)
-        .expect("could not create password manager");
-    let store_result = password_manager.store_password(IDENTIFIER, USERNAME, PASSWORD_FEW_SYMBOLS);
-    assert!(
-        store_result.is_err(),
-        "Passwords must contain at least three symbols."
     );
     teardown(&tmpfile);
 }
