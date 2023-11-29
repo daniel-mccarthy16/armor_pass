@@ -1,10 +1,12 @@
-mod encryption;
-mod generator;
-mod interface;
+pub mod encryption;
+pub mod generator;
 pub mod password_manager;
-mod storage;
-mod validation;
+pub mod shell;
+pub mod utility;
+
+use crate::shell::Shell;
 
 fn main() {
-    println!("Hello, world!");
+    let mut armor_pass_shell = Shell::new();
+    armor_pass_shell.run();
 }

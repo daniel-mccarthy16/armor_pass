@@ -5,6 +5,7 @@ use openssl::rand::rand_bytes;
 use openssl::symm::{Cipher, Crypter, Mode};
 use std::fs::File;
 use std::io::{Read, Write};
+use std::path::PathBuf;
 
 const ITERATIONS: usize = 100_000;
 const KEY_LENGTH: usize = 32; //32 bytes = 256bit which is the key length size aes_256_cbc expects
@@ -16,11 +17,11 @@ pub struct CryptoManager {
     iv: Vec<u8>,
     ciphertext: Vec<u8>,
     key: Vec<u8>,
-    filepath: String,
+    filepath: PathBuf,
 }
 
 impl CryptoManager {
-    pub fn new(filepath: &str, password: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(filepath: &PathBuf, password: &str) -> Result<Self, Box<dyn std::error::Error>> {
         match File::open(filepath) {
             Ok(mut file) => {
                 let mut salt = vec![0u8; SALT_LENGTH];
@@ -39,7 +40,7 @@ impl CryptoManager {
                     iv,
                     ciphertext,
                     key,
-                    filepath: filepath.to_string(),
+                    filepath: filepath.clone(),
                 })
             }
             Err(_) => {
@@ -52,7 +53,7 @@ impl CryptoManager {
                     iv,
                     ciphertext: Vec::new(),
                     key,
-                    filepath: filepath.to_string(),
+                    filepath: filepath.clone(),
                 })
             }
         }
@@ -128,12 +129,17 @@ impl CryptoManager {
 mod tests {
 
     use super::*;
+    use uuid::Uuid;
 
-    const TEST_FILE_PATH: &str = "test_file_path";
     const TEST_PASSWORD: &str = "test_password";
 
-    fn teardown() {
-        let _ = std::fs::remove_file(TEST_FILE_PATH);
+    fn teardown(filepath: &PathBuf) {
+        let _ = std::fs::remove_file(filepath);
+    }
+
+    fn generate_unique_file_path() -> PathBuf {
+        let unique_id = Uuid::new_v4().to_string();
+        PathBuf::from(format!("/tmp/test_{}.enc", unique_id))
     }
 
     #[test]
@@ -145,6 +151,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_decrypt() {
+        let testfilepath = generate_unique_file_path();
         let salt = CryptoManager::generate_salt(SALT_LENGTH).unwrap();
         let iv = CryptoManager::generate_iv(IV_LENGTH).unwrap();
         let key = CryptoManager::generate_key(TEST_PASSWORD, &salt).unwrap();
@@ -154,7 +161,7 @@ mod tests {
             iv,
             ciphertext: Vec::new(),
             key,
-            filepath: TEST_FILE_PATH.to_string(),
+            filepath: testfilepath.clone(),
         };
 
         let data = b"Hello, world!";
@@ -162,6 +169,7 @@ mod tests {
         let decrypted_data = crypto_manager.decrypt_data(&encrypted_data).unwrap();
 
         assert_eq!(decrypted_data, data);
+        teardown(&testfilepath);
     }
 
     #[test]
@@ -178,27 +186,31 @@ mod tests {
 
     #[test]
     fn test_new_instance_creation() {
-        let instance = CryptoManager::new(TEST_FILE_PATH, TEST_PASSWORD);
+        let testfilepath = generate_unique_file_path();
+        let instance = CryptoManager::new(&testfilepath, TEST_PASSWORD);
         assert!(instance.is_ok());
+        teardown(&testfilepath);
     }
 
     #[test]
     fn test_encrypt_and_persist_method() {
-        let mut crypto_manager = CryptoManager::new(TEST_FILE_PATH, TEST_PASSWORD).unwrap();
+        let testfilepath = generate_unique_file_path();
+        let mut crypto_manager = CryptoManager::new(&testfilepath, TEST_PASSWORD).unwrap();
         let data = b"Test data";
         let result = crypto_manager.encrypt_and_persist(data);
         assert!(result.is_ok());
-        teardown();
+        teardown(&testfilepath);
     }
 
     #[test]
     fn test_salt_stored_correctly_in_encrypted_file() {
-        let mut crypto_manager = CryptoManager::new(TEST_FILE_PATH, TEST_PASSWORD).unwrap();
+        let testfilepath = generate_unique_file_path();
+        let mut crypto_manager = CryptoManager::new(&testfilepath, TEST_PASSWORD).unwrap();
         let data = b"Test data";
 
         let _ = crypto_manager.encrypt_and_persist(data);
 
-        let mut file = File::open(TEST_FILE_PATH).expect("Couldnt open file");
+        let mut file = File::open(testfilepath.clone()).expect("Couldnt open file");
         let mut contents = Vec::new();
         file.read_to_end(&mut contents).expect("Couldnt read file");
 
@@ -206,17 +218,18 @@ mod tests {
 
         assert_eq!(salt_from_file, crypto_manager.salt.as_slice());
 
-        teardown();
+        teardown(&testfilepath);
     }
 
     #[test]
     fn test_iv_stored_correctly_in_encrypted_file() {
-        let mut crypto_manager = CryptoManager::new(TEST_FILE_PATH, TEST_PASSWORD).unwrap();
+        let testfilepath = generate_unique_file_path();
+        let mut crypto_manager = CryptoManager::new(&testfilepath, TEST_PASSWORD).unwrap();
         let data = b"Test data";
 
         let _ = crypto_manager.encrypt_and_persist(data);
 
-        let mut file = File::open(TEST_FILE_PATH).expect("Couldn't open fle");
+        let mut file = File::open(testfilepath.clone()).expect("Couldn't open fle");
         let mut contents = Vec::new();
         file.read_to_end(&mut contents)
             .expect("Could not read file");
@@ -225,7 +238,7 @@ mod tests {
 
         assert_eq!(iv_from_file, crypto_manager.iv.as_slice());
 
-        teardown();
+        teardown(&testfilepath);
     }
 }
 
