@@ -1,8 +1,8 @@
-mod encryption;
-mod generator;
+pub mod encryption;
+pub mod generator;
 pub mod password_manager;
 pub mod shell;
-mod utility;
+pub mod utility;
 
 use crate::shell::Shell;
 

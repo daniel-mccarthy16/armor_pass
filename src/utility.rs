@@ -2,9 +2,9 @@ use crate::password_manager::CredentialSet;
 use prettytable::{row, Cell, Row, Table};
 use std::io::{stdin, stdout, Write};
 
-pub fn validate_identifier(identifier: &str) -> Result<(), &str> {
+pub fn validate_identifier(identifier: &str) -> Result<(), ArmorPassError> {
     if !is_at_least_three_characters_long(identifier) {
-        Err("Identifier must be at least 3 characters long")
+        Err(ArmorPassError::CreateIdentifierTooShort)
     } else {
         Ok(())
     }
@@ -36,20 +36,7 @@ pub fn prompt_for_number(prompttxt: &str) -> Option<usize> {
 
 pub fn prompt_for_confirmation(prompttxt: &str) -> bool {
     let input = prompt(prompttxt).trim().to_lowercase();
-    match input.as_str() {
-        "y" | "yes" => true,
-        _ => false,
-    }
-}
-
-// Helper method to prompt with a default string value
-pub fn prompt_with_default(prompttxt: &str, default: &str) -> String {
-    let input = prompt(prompttxt);
-    if input.is_empty() {
-        default.to_string()
-    } else {
-        input
-    }
+    matches!(input.as_str(), "y" | "yes")
 }
 
 pub fn print_credential_list(credential_list: Vec<&CredentialSet>) {
@@ -76,6 +63,15 @@ pub fn print_credential(credential: &CredentialSet) {
     table.printstd();
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ArmorPassError {
+    CreateDuplicateUsername,
+    CreateDuplicatePassword,
+    CreateIdentifierTooShort,
+    FailedToPersistToDisk(String),
+    NoRecordFound,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,9 +79,12 @@ mod tests {
     #[test]
     fn test_validate_identifier() {
         assert_eq!(validate_identifier("id123"), Ok(()));
-        assert_eq!(
-            validate_identifier("id"),
-            Err("Identifier must be at least 3 characters long")
+        assert!(
+            matches!(
+                validate_identifier("id"),
+                Err(ArmorPassError::CreateIdentifierTooShort)
+            ),
+            "Expected CreateIdentifierTooShort error"
         );
     }
 }

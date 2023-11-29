@@ -1,5 +1,5 @@
 use crate::encryption::CryptoManager;
-use crate::utility::validate_identifier;
+use crate::utility::{validate_identifier, ArmorPassError};
 
 use std::path::PathBuf;
 
@@ -38,13 +38,15 @@ impl PasswordManager {
         identifier: &str,
         username: &str,
         password: &str,
-    ) -> Result<(), String> {
+    ) -> Result<(), ArmorPassError> {
         if self.password_is_duplicate(password) {
-            return Err("Password must be unique".to_string());
+            eprintln!("[ERROR]: Password must be unique");
+            return Err(ArmorPassError::CreateDuplicatePassword);
         }
 
         if self.username_is_duplicate(username) {
-            return Err("Username must be unique".to_string());
+            eprintln!("[ERROR]: username must be unique");
+            return Err(ArmorPassError::CreateDuplicateUsername);
         }
 
         validate_identifier(identifier)?;
@@ -57,7 +59,7 @@ impl PasswordManager {
 
         self.records.push(new_credentials);
 
-        Self::persist_credentials(self).map_err(|e| e.to_string())?;
+        Self::persist_credentials(self)?;
 
         Ok(())
     }
@@ -85,7 +87,7 @@ impl PasswordManager {
         identifier: &str,
         username: &str,
         new_password: &str,
-    ) -> Result<(), String> {
+    ) -> Result<(), ArmorPassError> {
         // Find a mutable reference to the record that needs updating.
         if let Some(record) = self
             .records
@@ -94,18 +96,18 @@ impl PasswordManager {
         {
             // If found, update the password field.
             record.password = new_password.to_owned();
-            Self::persist_credentials(self).map_err(|e| e.to_string())?;
+            Self::persist_credentials(self)?;
             Ok(())
         } else {
-            // If not found, return an Err.
-            Err(format!(
-                "No record found for identifier: {}, username: {}",
-                identifier, username
-            ))
+            Err(ArmorPassError::NoRecordFound)
         }
     }
 
-    pub fn delete_credential(&mut self, identifier: &str, username: &str) -> Result<(), String> {
+    pub fn delete_credential(
+        &mut self,
+        identifier: &str,
+        username: &str,
+    ) -> Result<(), ArmorPassError> {
         // Store the original length to determine if a record was deleted.
         let original_len = self.records.len();
 
@@ -116,13 +118,10 @@ impl PasswordManager {
         // Check if the records collection has changed in size.
         if self.records.len() == original_len {
             // No records were deleted, return an error.
-            Err(format!(
-                "No record found for identifier: {}, username: {}",
-                identifier, username
-            ))
+            Err(ArmorPassError::NoRecordFound)
         } else {
             // A record was deleted, persist the changes.
-            Self::persist_credentials(self).map_err(|e| e.to_string())?;
+            Self::persist_credentials(self)?;
             Ok(())
         }
     }
@@ -134,12 +133,22 @@ impl PasswordManager {
             .collect()
     }
 
-    fn persist_credentials(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let json_data = serde_json::to_string(&self.records)
-            .map_err(|e| format!("Failed to serialize records to json: {}", e))?;
+    fn persist_credentials(&mut self) -> Result<(), ArmorPassError> {
+        let json_data = serde_json::to_string(&self.records).map_err(|e| {
+            ArmorPassError::FailedToPersistToDisk(format!(
+                "Failed to serialize records to json: {}",
+                e
+            ))
+        })?;
 
         self.crypto_manager
-            .encrypt_and_persist(&json_data.into_bytes())?;
+            .encrypt_and_persist(&json_data.into_bytes())
+            .map_err(|e| {
+                ArmorPassError::FailedToPersistToDisk(format!(
+                    "Failed to encrypt and persist data: {}",
+                    e
+                ))
+            })?;
 
         Ok(())
     }
