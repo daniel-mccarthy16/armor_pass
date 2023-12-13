@@ -16,7 +16,7 @@ fn is_at_least_three_characters_long(password: &str) -> bool {
 
 pub fn prompt(prompttext: &str) -> String {
     print!(">> {}", prompttext);
-    stdout().flush().unwrap();
+    stdout().flush().unwrap(); // TODO - dangerous or not? 
 
     let mut input = String::new();
     stdin().read_line(&mut input).expect("Failed to read line");
