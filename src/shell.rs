@@ -20,14 +20,13 @@ pub struct CreatePasswordOptions {
     pub identifier: String,
     pub username: String,
     pub password: String,
-    pub password_generator_options: PasswordGeneratorOptions,
 }
 
 #[derive(Default)]
-struct UpdatePasswordOptions {
-    identifier: String,
-    username: String,
-    password_generator_options: PasswordGeneratorOptions,
+pub struct UpdatePasswordOptions {
+    pub identifier: String,
+    pub username: String,
+    pub password: String,
 }
 
 #[derive(Default)]
@@ -42,9 +41,9 @@ pub struct RetrieveAllOptions {
 }
 
 #[derive(Default)]
-struct DeletePasswordOptions {
-    identifier: String,
-    username: String
+pub struct DeletePasswordOptions {
+   pub  identifier: String,
+    pub username: String
 }
 
 impl Command {
@@ -149,10 +148,9 @@ impl Shell {
         options.identifier = self.prompt_for_identifier();
         options.username = self.prompt_for_username();
 
-        options.password_generator_options.prompt_for_options();
-
-        let password_generator = PasswordGenerator::new(&options.password_generator_options);
-
+        let mut password_generator_options = PasswordGeneratorOptions::default();
+        password_generator_options.prompt_for_options();
+        let password_generator = PasswordGenerator::new(&password_generator_options);
         options.password = password_generator.generate();
 
         let password_manager = self.get_password_manager_mut();
@@ -164,14 +162,12 @@ impl Shell {
         options.username = self.prompt_for_username();
 
         let password_manager = self.get_password_manager_mut();
-        let identifier_ref = options.identifier.as_str();
-        let username_ref = options.username.as_str();
 
-        match password_manager.delete_credential(identifier_ref, username_ref) {
+        match password_manager.delete_credential(options) {
             Ok(_) => {
                 println!(
                     "successfully deleted credential with identifer: {} and username: {}",
-                    identifier_ref, username_ref
+                    &options.identifier, &options.username
                 );
             }
             Err(_e) => (),
@@ -207,16 +203,16 @@ impl Shell {
         options.identifier = self.prompt_for_identifier();
         options.username = self.prompt_for_username();
 
-        options.password_generator_options.prompt_for_options();
 
-        let password_generator = PasswordGenerator::new(&options.password_generator_options);
-
-        let password = password_generator.generate();
+        let mut password_generator_options = PasswordGeneratorOptions::default();
+        password_generator_options.prompt_for_options();
+        let password_generator = PasswordGenerator::new(&password_generator_options);
+        options.password = password_generator.generate();
 
         let password_manager = self.get_password_manager_mut();
 
         if password_manager
-            .update_password(options.identifier.as_str(), options.username.as_str(), &password)
+            .update_password(options)
             .is_ok()
         {
             println!(
