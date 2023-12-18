@@ -10,11 +10,11 @@ const IDENTIFIER: &str = "website.com";
 const MASTERPASSWORD: &str = "heynowbrowncowaylmao";
 
 use armor_pass::password_manager::CredentialSet;
+use armor_pass::password_manager::PasswordManager;
+use armor_pass::shell::CreatePasswordOptions;
 use armor_pass::shell::DeletePasswordOptions;
 use armor_pass::shell::RetrieveAllOptions;
 use armor_pass::shell::RetrieveSingleOptions;
-use armor_pass::shell::CreatePasswordOptions;
-use armor_pass::password_manager::PasswordManager;
 use armor_pass::shell::UpdatePasswordOptions;
 use armor_pass::utility::ArmorPassError;
 use std::path::PathBuf;
@@ -29,7 +29,9 @@ fn generate_unique_file_path() -> PathBuf {
     PathBuf::from(format!("/tmp/test_{}.enc", unique_id))
 }
 
-fn store_identifier1_user1_password1 (password_manager: &mut PasswordManager) -> Result<(), ArmorPassError> {
+fn store_identifier1_user1_password1(
+    password_manager: &mut PasswordManager,
+) -> Result<(), ArmorPassError> {
     let options = CreatePasswordOptions {
         identifier: IDENTIFIER.to_string(),
         username: USERNAME.to_string(),
@@ -38,7 +40,9 @@ fn store_identifier1_user1_password1 (password_manager: &mut PasswordManager) ->
     password_manager.store_password(&options)
 }
 
-fn delete_identifier1_user1_password1 (password_manager: &mut PasswordManager) -> Result<(), ArmorPassError> {
+fn delete_identifier1_user1_password1(
+    password_manager: &mut PasswordManager,
+) -> Result<(), ArmorPassError> {
     let options = DeletePasswordOptions {
         identifier: IDENTIFIER.to_string(),
         username: USERNAME.to_string(),
@@ -46,7 +50,9 @@ fn delete_identifier1_user1_password1 (password_manager: &mut PasswordManager) -
     password_manager.delete_credential(&options)
 }
 
-fn update_identifier1_user1_password1 (password_manager: &mut PasswordManager) -> Result<(), ArmorPassError> {
+fn update_identifier1_user1_password1(
+    password_manager: &mut PasswordManager,
+) -> Result<(), ArmorPassError> {
     let options = UpdatePasswordOptions {
         identifier: IDENTIFIER.to_string(),
         username: USERNAME.to_string(),
@@ -55,7 +61,9 @@ fn update_identifier1_user1_password1 (password_manager: &mut PasswordManager) -
     password_manager.update_password(&options)
 }
 
-fn store_identifier1_user2_password2 (password_manager: &mut PasswordManager) -> Result<(), ArmorPassError> {
+fn store_identifier1_user2_password2(
+    password_manager: &mut PasswordManager,
+) -> Result<(), ArmorPassError> {
     let options = CreatePasswordOptions {
         identifier: IDENTIFIER.to_string(),
         username: USERNAME2.to_string(),
@@ -64,7 +72,7 @@ fn store_identifier1_user2_password2 (password_manager: &mut PasswordManager) ->
     password_manager.store_password(&options)
 }
 
-fn retrieve_identifier1_user1 (password_manager: &mut PasswordManager) -> Option<&CredentialSet> { 
+fn retrieve_identifier1_user1(password_manager: &mut PasswordManager) -> Option<&CredentialSet> {
     let options = RetrieveSingleOptions {
         identifier: IDENTIFIER.to_string(),
         username: USERNAME.to_string(),
@@ -72,22 +80,20 @@ fn retrieve_identifier1_user1 (password_manager: &mut PasswordManager) -> Option
     password_manager.retrieve_credential(&options)
 }
 
-fn retrieve_identifier1_user2 (password_manager: &mut PasswordManager) -> Option<&CredentialSet> {
+fn retrieve_identifier1_user2(password_manager: &mut PasswordManager) -> Option<&CredentialSet> {
     let options = RetrieveSingleOptions {
         identifier: IDENTIFIER.to_string(),
         username: USERNAME2.to_string(),
     };
     password_manager.retrieve_credential(&options)
-    
 }
 
-fn retrieve_all_identifier1 (password_manager: &mut PasswordManager) -> Vec<&CredentialSet> {
+fn retrieve_all_identifier1(password_manager: &mut PasswordManager) -> Vec<&CredentialSet> {
     let options = RetrieveAllOptions {
         identifier: IDENTIFIER.to_string(),
     };
     password_manager.retrieve_all_credentials(&options)
 }
-
 
 #[test]
 fn it_stores_a_password() {
@@ -306,7 +312,7 @@ fn it_does_not_allow_identical_passwords() {
     );
 
     // Attempt to store the same password again.
-    let second_store_result =store_identifier1_user1_password1(&mut password_manager);
+    let second_store_result = store_identifier1_user1_password1(&mut password_manager);
     assert!(
         second_store_result.is_err(),
         "Storing an identical password for the same identifier and username should not be allowed."

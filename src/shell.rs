@@ -32,7 +32,7 @@ pub struct UpdatePasswordOptions {
 #[derive(Default)]
 pub struct RetrieveSingleOptions {
     pub identifier: String,
-    pub username: String
+    pub username: String,
 }
 
 #[derive(Default)]
@@ -42,8 +42,8 @@ pub struct RetrieveAllOptions {
 
 #[derive(Default)]
 pub struct DeletePasswordOptions {
-   pub  identifier: String,
-    pub username: String
+    pub identifier: String,
+    pub username: String,
 }
 
 impl Command {
@@ -203,7 +203,6 @@ impl Shell {
         options.identifier = self.prompt_for_identifier();
         options.username = self.prompt_for_username();
 
-
         let mut password_generator_options = PasswordGeneratorOptions::default();
         password_generator_options.prompt_for_options();
         let password_generator = PasswordGenerator::new(&password_generator_options);
@@ -211,13 +210,11 @@ impl Shell {
 
         let password_manager = self.get_password_manager_mut();
 
-        if password_manager
-            .update_password(options)
-            .is_ok()
-        {
+        if password_manager.update_password(options).is_ok() {
             println!(
                 "succesfully updated password for identifier: {} with username: {}",
-                options.identifier.as_str(), options.username.as_str()
+                options.identifier.as_str(),
+                options.username.as_str()
             )
         }
     }
@@ -228,7 +225,7 @@ impl Shell {
             .expect("[ERROR]: havent yet unencrypted file for operation, authentication required")
     }
 
-    fn prompt_for_identifier (&mut self) -> String {
+    fn prompt_for_identifier(&mut self) -> String {
         let mut identifer: String = String::new();
         while identifer.is_empty() {
             identifer = prompt("Enter an identifier [cannot be empty]: ");
@@ -236,7 +233,7 @@ impl Shell {
         identifer
     }
 
-    fn prompt_for_username (&mut self) -> String {
+    fn prompt_for_username(&mut self) -> String {
         prompt("Enter a username: ")
     }
 }

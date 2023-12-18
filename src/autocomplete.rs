@@ -1,26 +1,23 @@
 use std::collections::HashMap;
 
 pub struct Node {
-    children: HashMap<char, Node>, 
-    terminal: bool
+    children: HashMap<char, Node>,
+    terminal: bool,
 }
 impl Node {
- 
-    fn new () -> Self {
+    fn new() -> Self {
         Node {
             terminal: false,
-            children: HashMap::new()
+            children: HashMap::new(),
         }
     }
 }
 
 pub struct Autocomplete {
-    root_node_pointer : Node,
+    root_node_pointer: Node,
 }
 
 impl Autocomplete {
-
-
     pub fn new(wordlist: &[&str]) -> Self {
         let mut autocomplete = Autocomplete {
             root_node_pointer: Node::new(),
@@ -33,7 +30,7 @@ impl Autocomplete {
         autocomplete
     }
 
-    fn add_to_trie ( &mut self, word: &str ) {
+    fn add_to_trie(&mut self, word: &str) {
         let mut current_node: &mut Node = &mut self.root_node_pointer;
         for char in word.chars() {
             //if an entry already exists in hash for char return it, else insert a new node and
@@ -43,8 +40,7 @@ impl Autocomplete {
         current_node.terminal = true;
     }
 
-    pub fn autocomplete ( &self, word: &str ) -> Vec<String> {
-
+    pub fn autocomplete(&self, word: &str) -> Vec<String> {
         let mut suggestions = Vec::new();
         let mut nodepointer: &Node = &self.root_node_pointer;
 
@@ -59,23 +55,21 @@ impl Autocomplete {
             }
         }
 
-        self.find_word_suggestions( word , &nodepointer, &mut suggestions);
+        self.find_word_suggestions(word, &nodepointer, &mut suggestions);
 
         suggestions
     }
 
-    fn find_word_suggestions ( &self, word: &str, node: &Node, suggestions: &mut Vec<String> ) -> () {
-
+    fn find_word_suggestions(&self, word: &str, node: &Node, suggestions: &mut Vec<String>) -> () {
         //break out condition
         if node.terminal == true {
             suggestions.push(word.to_string());
         }
 
         for (letter, childnode) in &node.children {
-            let newword = format!("{}{}", word,  letter);
-            self.find_word_suggestions ( &newword, childnode, suggestions ) ;
+            let newword = format!("{}{}", word, letter);
+            self.find_word_suggestions(&newword, childnode, suggestions);
         }
-
     }
 }
 
@@ -106,5 +100,4 @@ mod tests {
         let suggestions = autocomplete.autocomplete("ap");
         assert_eq!(suggestions, vec!["apple"]);
     }
-
 }

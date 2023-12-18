@@ -1,8 +1,8 @@
 use crate::encryption::CryptoManager;
+use crate::shell::CreatePasswordOptions;
 use crate::shell::DeletePasswordOptions;
 use crate::shell::RetrieveAllOptions;
 use crate::shell::RetrieveSingleOptions;
-use crate::shell::CreatePasswordOptions;
 use crate::shell::UpdatePasswordOptions;
 use crate::utility::{validate_identifier, ArmorPassError};
 
@@ -40,7 +40,7 @@ impl PasswordManager {
 
     pub fn store_password(
         &mut self,
-        options: &CreatePasswordOptions 
+        options: &CreatePasswordOptions,
     ) -> Result<(), ArmorPassError> {
         if self.password_is_duplicate(&options.password) {
             eprintln!("[ERROR]: Password must be unique");
@@ -73,13 +73,10 @@ impl PasswordManager {
             .any(|record| record.identifier == identifier && record.username == username)
     }
 
-    pub fn retrieve_credential(&self, options: &RetrieveSingleOptions ) -> Option<&CredentialSet> {
-
-        if let Some(record) = self
-            .records
-            .iter()
-            .find(|&record| record.identifier == options.identifier && record.username == options.username)
-        {
+    pub fn retrieve_credential(&self, options: &RetrieveSingleOptions) -> Option<&CredentialSet> {
+        if let Some(record) = self.records.iter().find(|&record| {
+            record.identifier == options.identifier && record.username == options.username
+        }) {
             Some(record)
         } else {
             None
@@ -88,14 +85,12 @@ impl PasswordManager {
 
     pub fn update_password(
         &mut self,
-        options: &UpdatePasswordOptions
+        options: &UpdatePasswordOptions,
     ) -> Result<(), ArmorPassError> {
         // Find a mutable reference to the record that needs updating.
-        if let Some(record) = self
-            .records
-            .iter_mut()
-            .find(|record| record.identifier == options.identifier && record.username == options.username)
-        {
+        if let Some(record) = self.records.iter_mut().find(|record| {
+            record.identifier == options.identifier && record.username == options.username
+        }) {
             // If found, update the password field.
             record.password = options.password.to_string();
             Self::persist_credentials(self)?;
@@ -107,14 +102,15 @@ impl PasswordManager {
 
     pub fn delete_credential(
         &mut self,
-        options: &DeletePasswordOptions
+        options: &DeletePasswordOptions,
     ) -> Result<(), ArmorPassError> {
         // Store the original length to determine if a record was deleted.
         let original_len = self.records.len();
 
         // Retain only the records that do not match the identifier and username.
-        self.records
-            .retain(|record| record.identifier != options.identifier || record.username != options.username);
+        self.records.retain(|record| {
+            record.identifier != options.identifier || record.username != options.username
+        });
 
         // Check if the records collection has changed in size.
         if self.records.len() == original_len {
@@ -128,7 +124,7 @@ impl PasswordManager {
     }
 
     pub fn retrieve_all_credentials(&self, options: &RetrieveAllOptions) -> Vec<&CredentialSet> {
-        let identifer_name: &str = options.identifier.as_str(); 
+        let identifer_name: &str = options.identifier.as_str();
         self.records
             .iter()
             .filter(|&record| record.identifier == identifer_name)
