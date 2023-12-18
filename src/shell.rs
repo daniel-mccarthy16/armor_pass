@@ -9,35 +9,41 @@ use std::path::PathBuf;
 enum Command {
     Create(CreatePasswordOptions),
     Delete(DeletePasswordOptions),
-    Retrieve(RetrievePasswordOptions),
+    Retrieve(RetrieveSingleOptions),
+    RetrieveAll(RetrieveAllOptions),
     Update(UpdatePasswordOptions),
     Quit,
 }
 
 #[derive(Default)]
-struct CreatePasswordOptions {
-    identifier: Option<String>,
-    username: Option<String>,
-    password_generator_options: PasswordGeneratorOptions,
+pub struct CreatePasswordOptions {
+    pub identifier: String,
+    pub username: String,
+    pub password: String,
 }
 
 #[derive(Default)]
-struct UpdatePasswordOptions {
-    identifier: Option<String>,
-    username: Option<String>,
-    password_generator_options: PasswordGeneratorOptions,
+pub struct UpdatePasswordOptions {
+    pub identifier: String,
+    pub username: String,
+    pub password: String,
 }
 
 #[derive(Default)]
-struct RetrievePasswordOptions {
-    identifier: Option<String>,
-    username: Option<String>,
+pub struct RetrieveSingleOptions {
+    pub identifier: String,
+    pub username: String,
 }
 
 #[derive(Default)]
-struct DeletePasswordOptions {
-    identifier: Option<String>,
-    username: Option<String>,
+pub struct RetrieveAllOptions {
+    pub identifier: String,
+}
+
+#[derive(Default)]
+pub struct DeletePasswordOptions {
+    pub identifier: String,
+    pub username: String,
 }
 
 impl Command {
@@ -45,7 +51,8 @@ impl Command {
         match command_str {
             "create" => Some(Command::Create(CreatePasswordOptions::default())),
             "delete" => Some(Command::Delete(DeletePasswordOptions::default())),
-            "retrieve" => Some(Command::Retrieve(RetrievePasswordOptions::default())),
+            "retrieve" => Some(Command::Retrieve(RetrieveSingleOptions::default())),
+            "retrieveall" => Some(Command::RetrieveAll(RetrieveAllOptions::default())),
             "update" => Some(Command::Update(UpdatePasswordOptions::default())),
             "quit" => Some(Command::Quit),
             "exit" => Some(Command::Quit),
@@ -58,6 +65,7 @@ impl Command {
             Command::Create(options) => shell.handle_create_command(options),
             Command::Delete(options) => shell.handle_delete_command(options),
             Command::Retrieve(options) => shell.handle_retrieve_command(options),
+            Command::RetrieveAll(options) => shell.handle_retrieve_all_command(options),
             Command::Update(options) => shell.handle_update_command(options),
             Command::Quit => shell.should_terminate = true,
         }
@@ -118,8 +126,9 @@ impl Shell {
         println!("1. Create - Use this command to create a new item.");
         println!("2. Delete - Use this command to delete an existing item.");
         println!("3. Retrieve - Use this command to retrieve details of an existing item.");
-        println!("4. Update - Use this command to update details of an existing item.");
-        println!("5. Quit - Use this command to exit the application.");
+        println!("4. RetrieveAll - Use this command to retrieve everything for an identifier");
+        println!("5. Update - Use this command to update details of an existing item.");
+        println!("6. Quit - Use this command to exit the application.");
         println!("\nType a command and press Enter to execute it.");
     }
 
@@ -136,105 +145,76 @@ impl Shell {
     }
 
     fn handle_create_command(&mut self, options: &mut CreatePasswordOptions) {
-        (options.identifier, options.username) = self.prompt_for_identifier_username();
+        options.identifier = self.prompt_for_identifier();
+        options.username = self.prompt_for_username();
 
-        options.password_generator_options.prompt_for_options();
+        let mut password_generator_options = PasswordGeneratorOptions::default();
+        password_generator_options.prompt_for_options();
+        let password_generator = PasswordGenerator::new(&password_generator_options);
+        options.password = password_generator.generate();
 
-        let password_generator = PasswordGenerator::new(&options.password_generator_options);
-
-        let password = password_generator.generate();
-
-        let identifier_ref = options
-            .identifier
-            .as_deref()
-            .expect("[ERROR]: could not source an identifier for password creation");
-        let username_ref = options
-            .username
-            .as_deref()
-            .expect("[ERROR]: could not source an identifier for password creation");
         let password_manager = self.get_password_manager_mut();
-        let _ = password_manager.store_password(identifier_ref, username_ref, &password);
+        let _ = password_manager.store_password(options);
     }
 
     fn handle_delete_command(&mut self, options: &mut DeletePasswordOptions) {
-        (options.identifier, options.username) = self.prompt_for_identifier_username();
+        options.identifier = self.prompt_for_identifier();
+        options.username = self.prompt_for_username();
 
         let password_manager = self.get_password_manager_mut();
-        let identifier_ref = options
-            .identifier
-            .as_deref()
-            .expect("[ERROR]: could not source an identifier for password creation");
-        let username_ref = options
-            .username
-            .as_deref()
-            .expect("[ERROR]: could not source an username for password creation");
 
-        match password_manager.delete_credential(identifier_ref, username_ref) {
+        match password_manager.delete_credential(options) {
             Ok(_) => {
                 println!(
                     "successfully deleted credential with identifer: {} and username: {}",
-                    identifier_ref, username_ref
+                    &options.identifier, &options.username
                 );
             }
             Err(_e) => (),
         }
     }
 
-    fn handle_retrieve_command(&mut self, options: &mut RetrievePasswordOptions) {
-        (options.identifier, options.username) = self.prompt_for_identifier_username();
-        let identifier_ref = options
-            .identifier
-            .as_deref()
-            .expect("[error]: could not source an identifier for password creation");
+    fn handle_retrieve_all_command(&mut self, options: &mut RetrieveAllOptions) {
+        options.identifier = self.prompt_for_identifier();
         let password_manager = self.get_password_manager_mut();
-        match options.username.as_deref() {
-            Some(username_ref) => {
-                match password_manager.retrieve_password(identifier_ref, username_ref) {
-                    Some(credential) => {
-                        print_credential(credential);
-                    }
-                    None => eprintln!(
-                        "[Warn]: Could not find a record for that identifier/username combination"
-                    ),
-                }
+        let credential_list = password_manager.retrieve_all_credentials(options);
+        if credential_list.is_empty() {
+            eprintln!("[Warn]: Could not find any records for that identifier");
+        } else {
+            print_credential_list(credential_list);
+        }
+    }
+
+    fn handle_retrieve_command(&mut self, options: &mut RetrieveSingleOptions) {
+        options.identifier = self.prompt_for_identifier();
+        options.username = self.prompt_for_username();
+        let password_manager = self.get_password_manager_mut();
+        match password_manager.retrieve_credential(options) {
+            Some(credential) => {
+                print_credential(credential);
             }
-            None => {
-                let credential_list = password_manager.retrieve_credentials(identifier_ref);
-                if credential_list.is_empty() {
-                    eprintln!("[Warn]: Could not find any records for that identifier");
-                } else {
-                    print_credential_list(credential_list);
-                }
-            }
+            None => eprintln!(
+                "[Warn]: Could not find a record for that identifier/username combination"
+            ),
         }
     }
 
     fn handle_update_command(&mut self, options: &mut UpdatePasswordOptions) {
-        (options.identifier, options.username) = self.prompt_for_identifier_username();
+        options.identifier = self.prompt_for_identifier();
+        options.username = self.prompt_for_username();
 
-        options.password_generator_options.prompt_for_options();
+        let mut password_generator_options = PasswordGeneratorOptions::default();
+        password_generator_options.prompt_for_options();
+        let password_generator = PasswordGenerator::new(&password_generator_options);
+        options.password = password_generator.generate();
 
-        let password_generator = PasswordGenerator::new(&options.password_generator_options);
-
-        let password = password_generator.generate();
-
-        let identifier_ref = options
-            .identifier
-            .as_deref()
-            .expect("[error]: could not source an identifier for password creation");
-        let username_ref = options
-            .username
-            .as_deref()
-            .expect("[error]: could not source an identifier for password creation");
         let password_manager = self.get_password_manager_mut();
 
-        if password_manager
-            .update_password(identifier_ref, username_ref, &password)
-            .is_ok()
-        {
+        if password_manager.update_password(options).is_ok() {
             println!(
                 "succesfully updated password for identifier: {} with username: {}",
-                identifier_ref, username_ref
+                options.identifier.as_str(),
+                options.username.as_str()
             )
         }
     }
@@ -245,9 +225,15 @@ impl Shell {
             .expect("[ERROR]: havent yet unencrypted file for operation, authentication required")
     }
 
-    fn prompt_for_identifier_username(&mut self) -> (Option<String>, Option<String>) {
-        let identifier = prompt("Enter an identifier: ");
-        let username = prompt("Enter a username: ");
-        (Some(identifier), Some(username))
+    fn prompt_for_identifier(&mut self) -> String {
+        let mut identifer: String = String::new();
+        while identifer.is_empty() {
+            identifer = prompt("Enter an identifier [cannot be empty]: ");
+        }
+        identifer
+    }
+
+    fn prompt_for_username(&mut self) -> String {
+        prompt("Enter a username: ")
     }
 }
