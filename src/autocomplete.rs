@@ -24,7 +24,7 @@ impl Autocomplete {
         };
 
         for word in wordlist.iter() {
-            autocomplete.add_to_trie(&word);
+            autocomplete.add_to_trie(word);
         }
 
         autocomplete
@@ -55,20 +55,20 @@ impl Autocomplete {
             }
         }
 
-        self.find_word_suggestions(word, &nodepointer, &mut suggestions);
+        Self::find_word_suggestions(word, nodepointer, &mut suggestions);
 
         suggestions
     }
 
-    fn find_word_suggestions(&self, word: &str, node: &Node, suggestions: &mut Vec<String>) -> () {
+    fn find_word_suggestions(word: &str, node: &Node, suggestions: &mut Vec<String>) {
         //break out condition
-        if node.terminal == true {
+        if node.terminal {
             suggestions.push(word.to_string());
         }
 
         for (letter, childnode) in &node.children {
             let newword = format!("{}{}", word, letter);
-            self.find_word_suggestions(&newword, childnode, suggestions);
+            Self::find_word_suggestions(&newword, childnode, suggestions);
         }
     }
 }
